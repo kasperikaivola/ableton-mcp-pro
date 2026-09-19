@@ -100,7 +100,7 @@ Problems encountered during M4L device development, roughly ordered by how much 
 
 **Cause**: macOS file system caching or app bundle protection quirks. Similar to the Remote Script `cp` issue.
 
-**Fix**: Use explicit `rm` before `cp`, and verify with `wc -l` or `md5` after copying.
+**Fix**: Use `python MaxForLive/build_amxd.py --install`, which deletes the destination files before copying. Verify with file size or a checksum after install.
 
 ## 12. Arrangement Commands May Timeout
 

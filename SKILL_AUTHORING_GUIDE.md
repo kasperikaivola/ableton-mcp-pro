@@ -1,11 +1,13 @@
 # Skill Authoring Guide
 
-Best practices for creating and maintaining music production skills for Ableton MCP.
+Best practices for creating and maintaining music production skills for Ableton MCP-capable agents.
+
+Claude discovers skills under `.claude/skills/`; Codex discovers `.agents/skills/`. These are provider-specific discovery paths for the same 20 skills and must remain exact mirrors. After changing a skill, run `python tools/check_skill_mirrors.py`.
 
 ## What Makes a Good Skill
 
 ### The Bar: "Excellent"
-An excellent skill lets Claude execute a complete production workflow — from empty Ableton session to a playable result — using only MCP tool calls. Every line should either be a concrete action or context that directly informs one.
+An excellent skill lets an MCP-capable agent execute a complete production workflow — from empty Ableton session to a playable result — using only MCP tool calls.
 
 ### Quality Checklist
 - [ ] Specific parameter values (not "add some reverb" — "Reverb: decay 3.5s, pre-delay 20ms, diffusion 80%")
@@ -20,6 +22,7 @@ An excellent skill lets Claude execute a complete production workflow — from e
 
 ```
 .claude/skills/<skill-name>/SKILL.md
+.agents/skills/<skill-name>/SKILL.md
 ```
 
 ### YAML Frontmatter (required)
@@ -30,7 +33,7 @@ description: One sentence. Start with "Create..." Use when the user asks for X, 
 ---
 ```
 
-The `description` field controls when Claude activates the skill. Include:
+The description field controls when a provider activates the skill. Keep the matching files byte-for-byte identical across `.claude/skills/` and `.agents/skills/`; the mirror checker enforces this. Include:
 - The primary thing it creates
 - 4-6 trigger phrases covering common ways users might ask for it
 - No artist names unless truly genre-defining
@@ -46,28 +49,29 @@ The `description` field controls when Claude activates the skill. Include:
 
 Not every skill needs all sections. A bass skill doesn't need pattern diagrams. A drums skill doesn't need sound design depth. Match the structure to the content.
 
-## MCP Compatibility
+## MCP and Provider Compatibility
 
-### Always check: can Claude actually do this?
+### Always check: can the MCP client actually do this?
 
 **Fully supported operations:**
 - Create MIDI tracks, clips, add notes
 - Load Operator, Wavetable, Analog, Simpler, Drum Rack
 - Load any effect (EQ8, Compressor, Reverb, Saturator, Auto Filter, etc.)
+- Load MIDI effects (Chord, Scale, Arpeggiator) via `get_browser_items_at_path("midi_effects")` then `load_instrument_or_effect`, then `move_device` to sit before the instrument (Remote Script)
 - Set device parameters by index (normalized 0.0-1.0)
 - Set track volume, panning, send levels
-- Write clip automation envelopes
+- Write clip automation envelopes (session or arrangement clip)
+- Apply an existing Groove Pool entry (`get_groove_pool` / `apply_groove`)
+- List rack chains; `insert_rack_chain` on Live 12.3+
 - Set tempo, time signature
 
 **NOT supported (avoid in skills or note as manual steps):**
-- Creating Instrument/Audio Effect Racks with chains
-- Loading MIDI effects (Chord, Scale, Arpeggiator)
-- Applying groove templates from Groove Pool
+- Mapping a new parameter onto a rack macro (Map mode is GUI-only; existing macros can be set)
 - Slicing audio to MIDI
-- Macro mapping
-- Creating return tracks
-- Grouping tracks
-- Resampling/freezing/flattening
+- Freezing/flattening tracks
+- `insert_rack_chain` on Live versions before 12.3 (load a multi-chain rack from the browser instead)
+
+**Supported mixdown path:** `resample_master` records the main mix through a resampling track. Live has no general export command.
 
 If a skill requires unsupported operations for its core workflow, either find a workaround or don't create the skill. A skill that can't be executed is worse than no skill.
 

@@ -2,7 +2,7 @@
 // Runs inside Max's js object. All LiveAPI calls happen here.
 
 autowatch = 1;
-var HANDLER_VERSION = "2026-09-12.1";
+var HANDLER_VERSION = "2026-09-20.1";
 inlets = 1;
 outlets = 1;
 
@@ -102,6 +102,21 @@ function getTrack(trackIndex) {
     return new LiveAPI(getTrackPath(trackIndex));
 }
 
+function sessionClipPath(params) {
+    var trackIndex = param(params, "track_index", 0);
+    var clipIndex = param(params, "clip_index", 0);
+    var aci = param(params, "arrangement_clip_index", null);
+    var trackPath = getTrackPath(trackIndex);
+    if (aci !== null && aci !== undefined) {
+        var count = apiGetOptionalCount(trackPath, "arrangement_clips");
+        if (aci < 0 || aci >= count) throw "Arrangement clip index out of range";
+        return trackPath + " arrangement_clips " + aci;
+    }
+    var slotPath = trackPath + " clip_slots " + clipIndex;
+    if (!apiGetOptionalNum(slotPath, "has_clip")) throw "No clip in slot";
+    return slotPath + " clip";
+}
+
 // ─── Command dispatch ───
 
 function dispatch(cmdType, params) {
@@ -118,6 +133,12 @@ function dispatch(cmdType, params) {
         case "get_arrangement_clip_notes": return cmd_get_arrangement_clip_notes(params);
         case "get_track_routing": return cmd_get_track_routing(params);
         case "get_clip_envelope": return cmd_get_clip_envelope(params);
+        case "get_groove_pool": return cmd_get_groove_pool(params);
+        case "get_device_sidechain": return cmd_get_device_sidechain(params);
+        case "get_rack_chains": return cmd_get_rack_chains(params);
+        case "get_rack_macros": return cmd_get_rack_macros(params);
+        case "get_cue_points": return cmd_get_cue_points(params);
+        case "get_warp_markers": return cmd_get_warp_markers(params);
         case "get_browser_tree": return cmd_get_browser_tree(params);
         case "get_browser_items_at_path": return cmd_get_browser_items_at_path(params);
 
@@ -132,6 +153,9 @@ function dispatch(cmdType, params) {
         case "set_track_solo": return cmd_set_track_solo(params);
         case "set_track_arm": return cmd_set_track_arm(params);
         case "set_send_level": return cmd_set_send_level(params);
+        case "set_crossfader": return cmd_set_crossfader(params);
+        case "set_crossfade_assign": return cmd_set_crossfade_assign(params);
+        case "set_groove_amount": return cmd_set_groove_amount(params);
         case "set_track_monitoring": return cmd_set_track_monitoring(params);
         case "set_track_input_routing": return cmd_set_track_input_routing(params);
         case "set_track_output_routing": return cmd_set_track_output_routing(params);
@@ -140,6 +164,11 @@ function dispatch(cmdType, params) {
         case "play_arrangement": return cmd_play_arrangement(params);
         case "set_song_time": return cmd_set_song_time(params);
         case "set_record_mode": return cmd_set_record_mode(params);
+        case "capture_midi": return cmd_capture_midi(params);
+        case "capture_and_insert_scene": return cmd_capture_and_insert_scene(params);
+        case "toggle_cue": return cmd_toggle_cue(params);
+        case "jump_to_cue": return cmd_jump_to_cue(params);
+        case "show_view": return cmd_show_view(params);
         case "set_arrangement_overdub": return cmd_set_arrangement_overdub(params);
         case "set_back_to_arranger": return cmd_set_back_to_arranger(params);
         case "set_arrangement_loop": return cmd_set_arrangement_loop(params);
@@ -161,6 +190,11 @@ function dispatch(cmdType, params) {
         case "duplicate_clip": return cmd_duplicate_clip(params);
         case "set_clip_name": return cmd_set_clip_name(params);
         case "set_clip_loop": return cmd_set_clip_loop(params);
+        case "crop_clip": return cmd_crop_clip(params);
+        case "set_clip_launch": return cmd_set_clip_launch(params);
+        case "apply_groove": return cmd_apply_groove(params);
+        case "clear_clip_groove": return cmd_clear_clip_groove(params);
+        case "add_warp_marker": return cmd_add_warp_marker(params);
         case "fire_clip": return cmd_fire_clip(params);
         case "stop_clip": return cmd_stop_clip(params);
         case "add_notes_to_clip": return cmd_add_notes_to_clip(params);
@@ -173,6 +207,10 @@ function dispatch(cmdType, params) {
         case "set_device_parameter": return cmd_set_device_parameter(params);
         case "batch_set_device_parameters": return cmd_batch_set_device_parameters(params);
         case "delete_device": return cmd_delete_device(params);
+        case "move_device": return cmd_move_device(params);
+        case "set_device_sidechain": return cmd_set_device_sidechain(params);
+        case "insert_rack_chain": return cmd_insert_rack_chain(params);
+        case "set_chain_mixer": return cmd_set_chain_mixer(params);
         case "load_instrument_or_effect": return cmd_load_instrument_or_effect(params);
         case "load_browser_item": return cmd_load_instrument_or_effect(params);
         case "set_clip_envelope": return cmd_set_clip_envelope(params);
@@ -212,6 +250,32 @@ function apiGetNum(path, prop) {
 function apiGetCount(path, child) {
     var api = new LiveAPI(path);
     return api.getcount(child);
+}
+
+function apiGetOptionalStr(path, prop) {
+    try {
+        return apiGetStr(path, prop);
+    } catch (e) {
+        return null;
+    }
+}
+
+function apiGetOptionalNum(path, prop) {
+    try {
+        var value = apiGetNum(path, prop);
+        return isFinite(value) ? value : null;
+    } catch (e) {
+        return null;
+    }
+}
+
+function apiGetOptionalCount(path, child) {
+    try {
+        var count = Number(apiGetCount(path, child));
+        return isFinite(count) && count > 0 ? Math.floor(count) : 0;
+    } catch (e) {
+        return 0;
+    }
 }
 
 function param(params, key, defaultVal) {
@@ -258,28 +322,34 @@ function cmd_get_track_info(params) {
     }
 
     var name = apiGetStr(trackPath, "name");
-    var hasAudioInput = apiGetNum(trackPath, "has_audio_input");
-    var hasMidiInput = apiGetNum(trackPath, "has_midi_input");
-    var mute = apiGetNum(trackPath, "mute");
-    var solo = apiGetNum(trackPath, "solo");
-    var arm = apiGetNum(trackPath, "arm");
-    var volume = apiGetNum(trackPath + " mixer_device volume", "value");
-    var panning = apiGetNum(trackPath + " mixer_device panning", "value");
+    var hasAudioInput = apiGetOptionalNum(trackPath, "has_audio_input");
+    var hasMidiInput = apiGetOptionalNum(trackPath, "has_midi_input");
+    var mute = apiGetOptionalNum(trackPath, "mute");
+    var solo = apiGetOptionalNum(trackPath, "solo");
+    var arm = apiGetOptionalNum(trackPath, "arm");
+    var volume = apiGetOptionalNum(trackPath + " mixer_device volume", "value");
+    var panning = apiGetOptionalNum(trackPath + " mixer_device panning", "value");
+
+    var kind = trackIndex === -1 ? "master" : (trackIndex <= -2 ? "return" : "regular");
+    var isFoldable = apiGetOptionalNum(trackPath, "is_foldable");
+    var isGrouped = apiGetOptionalNum(trackPath, "is_grouped");
+    var explicitGroup = apiGetOptionalNum(trackPath, "is_group_track");
+    if (trackIndex >= 0 && (explicitGroup || isFoldable)) kind = "group";
 
     // Get clip slots
-    var slotCount = apiGetCount(trackPath, "clip_slots");
+    var slotCount = apiGetOptionalCount(trackPath, "clip_slots");
     var clipSlots = [];
     for (var i = 0; i < slotCount; i++) {
         var slotPath = trackPath + " clip_slots " + i;
-        var hasClip = apiGetNum(slotPath, "has_clip");
+        var hasClip = apiGetOptionalNum(slotPath, "has_clip");
         var clipInfo = null;
         if (hasClip) {
             var clipPath = slotPath + " clip";
             clipInfo = {
-                name: apiGetStr(clipPath, "name"),
-                length: apiGetNum(clipPath, "length"),
-                is_playing: apiGetNum(clipPath, "is_playing") ? true : false,
-                is_recording: apiGetNum(clipPath, "is_recording") ? true : false
+                name: apiGetOptionalStr(clipPath, "name"),
+                length: apiGetOptionalNum(clipPath, "length"),
+                is_playing: apiGetOptionalNum(clipPath, "is_playing") ? true : false,
+                is_recording: apiGetOptionalNum(clipPath, "is_recording") ? true : false
             };
         }
         clipSlots.push({
@@ -290,12 +360,12 @@ function cmd_get_track_info(params) {
     }
 
     // Get devices
-    var deviceCount = apiGetCount(trackPath, "devices");
+    var deviceCount = apiGetOptionalCount(trackPath, "devices");
     var devices = [];
     for (var d = 0; d < deviceCount; d++) {
         var devPath = trackPath + " devices " + d;
-        var devName = apiGetStr(devPath, "name");
-        var className = apiGetStr(devPath, "class_name");
+        var devName = apiGetOptionalStr(devPath, "name");
+        var className = apiGetOptionalStr(devPath, "class_name");
         var devType = getDeviceType(devPath);
         devices.push({
             index: d,
@@ -305,19 +375,60 @@ function cmd_get_track_info(params) {
         });
     }
 
-    return {
+    var result = {
         index: trackIndex,
         name: name,
-        is_audio_track: hasAudioInput ? true : false,
-        is_midi_track: hasMidiInput ? true : false,
-        mute: mute ? true : false,
-        solo: solo ? true : false,
-        arm: arm ? true : false,
-        volume: volume,
-        panning: panning,
+        kind: kind,
+        track_kind: kind,
+        is_group_track: kind === "group",
         clip_slots: clipSlots,
         devices: devices
     };
+
+    if (hasAudioInput !== null) result.is_audio_track = hasAudioInput ? true : false;
+    if (hasMidiInput !== null) result.is_midi_track = hasMidiInput ? true : false;
+    if (mute !== null) result.mute = mute ? true : false;
+    if (solo !== null) result.solo = solo ? true : false;
+    if (arm !== null) result.arm = arm ? true : false;
+    if (volume !== null) result.volume = volume;
+    if (panning !== null) result.panning = panning;
+    if (isFoldable !== null) result.is_foldable = isFoldable ? true : false;
+    if (isGrouped !== null) result.is_grouped = isGrouped ? true : false;
+
+    var foldState = apiGetOptionalNum(trackPath, "fold_state");
+    if (foldState !== null) result.fold_state = foldState;
+
+    var childCount = apiGetOptionalCount(trackPath, "children");
+    if (childCount) result.child_track_count = childCount;
+
+    var groupTrackPath = trackPath + " group_track";
+    try {
+        var groupTrack = new LiveAPI(groupTrackPath);
+        if (groupTrack.id && groupTrack.id !== "0") {
+            var groupName = apiGetOptionalStr(groupTrackPath, "name");
+            result.group_track = {
+                id: String(groupTrack.id),
+                name: groupName
+            };
+            if (groupName !== null) result.group_track_name = groupName;
+            var trackCount = apiGetOptionalCount("live_set", "tracks");
+            for (var gi = 0; gi < trackCount; gi++) {
+                try {
+                    var candidate = new LiveAPI("live_set tracks " + gi);
+                    if (candidate.id && String(candidate.id) === String(groupTrack.id)) {
+                        result.group_track_index = gi;
+                        break;
+                    }
+                } catch (lookupErr) {
+                    // Skip tracks Live cannot inspect while resolving the parent group.
+                }
+            }
+        }
+    } catch (e) {
+        // group_track is unavailable on some track types and older Live versions.
+    }
+
+    return result;
 }
 
 function getDeviceType(devPath) {
@@ -400,23 +511,35 @@ function cmd_get_arrangement_info() {
     };
 }
 
+function arrangementClipInfo(clipPath) {
+    var isAudio = apiGetOptionalNum(clipPath, "is_audio_clip") ? true : false;
+    var startTime = apiGetOptionalNum(clipPath, "start_time");
+    var endTime = apiGetOptionalNum(clipPath, "end_time");
+    var length = apiGetOptionalNum(clipPath, "length");
+    var info = {
+        name: apiGetOptionalStr(clipPath, "name") || "",
+        start_time: startTime !== null ? startTime : 0,
+        end_time: endTime !== null ? endTime : 0,
+        length: length !== null ? length : 0,
+        is_midi_clip: apiGetOptionalNum(clipPath, "is_midi_clip") ? true : false,
+        is_audio_clip: isAudio
+    };
+    if (isAudio) {
+        var filePath = apiGetOptionalStr(clipPath, "file_path");
+        if (filePath !== null) info.file_path = filePath;
+    }
+    return info;
+}
+
 function cmd_get_arrangement_clips(params) {
     var trackIndex = param(params, "track_index", 0);
     var trackPath = getTrackPath(trackIndex);
-    var trackName = apiGetStr(trackPath, "name");
+    var trackName = apiGetOptionalStr(trackPath, "name") || "";
 
     var clips = [];
-    var clipCount = apiGetCount(trackPath, "arrangement_clips");
+    var clipCount = apiGetOptionalCount(trackPath, "arrangement_clips");
     for (var i = 0; i < clipCount; i++) {
-        var clipPath = trackPath + " arrangement_clips " + i;
-        clips.push({
-            name: apiGetStr(clipPath, "name"),
-            start_time: apiGetNum(clipPath, "start_time"),
-            end_time: apiGetNum(clipPath, "end_time"),
-            length: apiGetNum(clipPath, "length"),
-            is_midi_clip: apiGetNum(clipPath, "is_midi_clip") ? true : false,
-            is_audio_clip: apiGetNum(clipPath, "is_audio_clip") ? true : false
-        });
+        clips.push(arrangementClipInfo(trackPath + " arrangement_clips " + i));
     }
 
     return {
@@ -428,46 +551,43 @@ function cmd_get_arrangement_clips(params) {
 }
 
 function cmd_get_full_arrangement() {
-    var trackCount = apiGetCount("live_set", "tracks");
+    var trackCount = apiGetOptionalCount("live_set", "tracks");
     var tracksData = [];
 
     for (var i = 0; i < trackCount; i++) {
         var trackPath = "live_set tracks " + i;
-        var clipCount = apiGetCount(trackPath, "arrangement_clips");
+        var clipCount = apiGetOptionalCount(trackPath, "arrangement_clips");
         if (clipCount === 0) continue;
 
         var clips = [];
         for (var c = 0; c < clipCount; c++) {
-            var clipPath = trackPath + " arrangement_clips " + c;
-            clips.push({
-                name: apiGetStr(clipPath, "name"),
-                start_time: apiGetNum(clipPath, "start_time"),
-                end_time: apiGetNum(clipPath, "end_time"),
-                length: apiGetNum(clipPath, "length"),
-                is_midi_clip: apiGetNum(clipPath, "is_midi_clip") ? true : false
-            });
+            clips.push(arrangementClipInfo(trackPath + " arrangement_clips " + c));
         }
 
         tracksData.push({
             track_index: i,
-            track_name: apiGetStr(trackPath, "name"),
+            track_name: apiGetOptionalStr(trackPath, "name") || "",
             clips: clips
         });
     }
 
-    var sceneCount = apiGetCount("live_set", "scenes");
+    var sceneCount = apiGetOptionalCount("live_set", "scenes");
     var scenes = [];
     for (var s = 0; s < sceneCount; s++) {
         scenes.push({
             index: s,
-            name: apiGetStr("live_set scenes " + s, "name")
+            name: apiGetOptionalStr("live_set scenes " + s, "name") || ""
         });
     }
 
+    var tempo = apiGetOptionalNum("live_set", "tempo");
+    var sigNum = apiGetOptionalNum("live_set", "signature_numerator");
+    var sigDen = apiGetOptionalNum("live_set", "signature_denominator");
+    var songLength = apiGetOptionalNum("live_set", "song_length");
     return {
-        tempo: apiGetNum("live_set", "tempo"),
-        time_signature: apiGetNum("live_set", "signature_numerator") + "/" + apiGetNum("live_set", "signature_denominator"),
-        song_length: apiGetNum("live_set", "song_length"),
+        tempo: tempo !== null ? tempo : 0,
+        time_signature: (sigNum !== null ? sigNum : 4) + "/" + (sigDen !== null ? sigDen : 4),
+        song_length: songLength !== null ? songLength : 0,
         tracks_with_clips: tracksData,
         scenes: scenes
     };
@@ -530,11 +650,7 @@ function cmd_get_clip_envelope(params) {
     var deviceIndex = param(params, "device_index", 0);
     var parameterIndex = param(params, "parameter_index", 0);
     var trackPath = getTrackPath(trackIndex);
-    var slotPath = trackPath + " clip_slots " + clipIndex;
-
-    if (!apiGetNum(slotPath, "has_clip")) throw "No clip in slot";
-
-    var clipPath = slotPath + " clip";
+    var clipPath = sessionClipPath(params);
     var devPath = trackPath + " devices " + deviceIndex;
     var pPath = devPath + " parameters " + parameterIndex;
     var paramName = apiGetStr(pPath, "name");
@@ -798,6 +914,23 @@ function cmd_set_record_mode(params) {
     var song = new LiveAPI("live_set");
     song.set("record_mode", on ? 1 : 0);
     return { record_mode: apiGetNum("live_set", "record_mode") ? true : false };
+}
+
+function cmd_capture_midi(params) {
+    var raw = param(params, "destination", 0);
+    if (typeof raw !== "number" || !isFinite(raw) || Math.floor(raw) !== raw ||
+            (raw !== 0 && raw !== 1 && raw !== 2)) {
+        throw "destination must be an integer 0, 1, or 2";
+    }
+
+    var destinationNames = ["auto", "session", "arrangement"];
+    var song = new LiveAPI("live_set");
+    song.call("capture_midi", raw);
+    return {
+        captured: true,
+        destination: raw,
+        destination_name: destinationNames[raw]
+    };
 }
 
 function cmd_set_arrangement_overdub(params) {
@@ -1103,18 +1236,31 @@ function cmd_add_notes_to_clip(params) {
     var trackIndex = param(params, "track_index", 0);
     var clipIndex = param(params, "clip_index", 0);
     var notes = param(params, "notes", []);
-    var slotPath = "live_set tracks " + trackIndex + " clip_slots " + clipIndex;
+    var arrangementClipIndex = param(params, "arrangement_clip_index", null);
+    var clipPath;
 
-    if (!apiGetNum(slotPath, "has_clip")) throw "No clip in slot";
+    if (arrangementClipIndex !== null) {
+        var trackPath = "live_set tracks " + trackIndex;
+        var arrangementClipCount = apiGetOptionalCount(trackPath, "arrangement_clips");
+        if (arrangementClipIndex < 0 || arrangementClipIndex >= arrangementClipCount) {
+            throw "Arrangement clip index out of range (track has " + arrangementClipCount + " arrangement clips)";
+        }
+        clipPath = trackPath + " arrangement_clips " + arrangementClipIndex;
+    } else {
+        var slotPath = "live_set tracks " + trackIndex + " clip_slots " + clipIndex;
+        if (!apiGetNum(slotPath, "has_clip")) throw "No clip in slot";
+        clipPath = slotPath + " clip";
+    }
 
-    var clipPath = slotPath + " clip";
     var clip = new LiveAPI(clipPath);
 
     if (!apiGetNum(clipPath, "is_midi_clip")) throw "Not a MIDI clip";
 
-    // Use set_notes protocol: call("notes", count), then per-note call("note", ...), then call("done")
+    // Append: set_notes replaces the whole clip. Empty selection +
+    // replace_selected_notes adds without deleting existing notes.
     // CRITICAL: time and duration must be strings with decimal points to avoid "Invalid syntax" bug
-    clip.call("set_notes");
+    clip.call("deselect_all_notes");
+    clip.call("replace_selected_notes");
     clip.call("notes", notes.length);
     for (var i = 0; i < notes.length; i++) {
         var n = notes[i];
@@ -1223,12 +1369,8 @@ function cmd_set_clip_envelope(params) {
     var deviceIndex = param(params, "device_index", 0);
     var parameterIndex = param(params, "parameter_index", 0);
     var points = param(params, "points", []);
-    var trackPath = "live_set tracks " + trackIndex;
-    var slotPath = trackPath + " clip_slots " + clipIndex;
-
-    if (!apiGetNum(slotPath, "has_clip")) throw "No clip in slot";
-
-    var clipPath = slotPath + " clip";
+    var trackPath = getTrackPath(trackIndex);
+    var clipPath = sessionClipPath(params);
     var pPath = trackPath + " devices " + deviceIndex + " parameters " + parameterIndex;
     var pMin = apiGetNum(pPath, "min");
     var pMax = apiGetNum(pPath, "max");
@@ -1296,12 +1438,8 @@ function cmd_clear_clip_envelope(params) {
     var clipIndex = param(params, "clip_index", 0);
     var deviceIndex = param(params, "device_index", 0);
     var parameterIndex = param(params, "parameter_index", 0);
-    var trackPath = "live_set tracks " + trackIndex;
-    var slotPath = trackPath + " clip_slots " + clipIndex;
-
-    if (!apiGetNum(slotPath, "has_clip")) throw "No clip in slot";
-
-    var clipPath = slotPath + " clip";
+    var trackPath = getTrackPath(trackIndex);
+    var clipPath = sessionClipPath(params);
     var pPath = trackPath + " devices " + deviceIndex + " parameters " + parameterIndex;
     var paramName = apiGetStr(pPath, "name");
 
@@ -1378,6 +1516,23 @@ function setRouting(trackIndex, prop, availableProp, wantedName, caseInsensitive
             // Setting a routing takes the dictionary back (identifier is what Live keys on).
             track.set(prop, JSON.stringify({ display_name: name, identifier: available[i].identifier }));
             var now = routingName(apiGetJson(track, prop));
+            if (now !== name) throw "Live did not accept routing " + name + " (still " + now + ")";
+            return name;
+        }
+    }
+    throw "Routing type not found: " + wantedName + ". Available: " + names.join(", ");
+}
+
+function setRoutingOnApi(api, prop, availableProp, wantedName, caseInsensitive) {
+    var available = apiGetJson(api, availableProp) || [];
+    var names = [];
+    for (var i = 0; i < available.length; i++) {
+        var name = routingName(available[i]);
+        names.push(name);
+        var match = caseInsensitive ? (name.toLowerCase() === String(wantedName).toLowerCase()) : (name === wantedName);
+        if (match) {
+            api.set(prop, JSON.stringify({ display_name: name, identifier: available[i].identifier }));
+            var now = routingName(apiGetJson(api, prop));
             if (now !== name) throw "Live did not accept routing " + name + " (still " + now + ")";
             return name;
         }
@@ -1698,4 +1853,421 @@ function cmd_record_arrangement(params) {
             reject(e);
         }
     });
+}
+
+function setNormalizedMixerParam(paramPath, normalized, label) {
+    if (normalized < 0.0 || normalized > 1.0) throw label + " must be between 0.0 and 1.0";
+    var pMin = apiGetNum(paramPath, "min");
+    var pMax = apiGetNum(paramPath, "max");
+    var pApi = new LiveAPI(paramPath);
+    pApi.set("value", pMin + normalized * (pMax - pMin));
+    return apiGetNum(paramPath, "value");
+}
+
+function cmd_get_groove_pool() {
+    var count = apiGetOptionalCount("live_set groove_pool", "grooves");
+    var grooves = [];
+    for (var i = 0; i < count; i++) {
+        var gPath = "live_set groove_pool grooves " + i;
+        grooves.push({
+            index: i,
+            name: apiGetOptionalStr(gPath, "name"),
+            amount: apiGetOptionalNum(gPath, "amount")
+        });
+    }
+    return {
+        groove_amount: apiGetOptionalNum("live_set", "groove_amount"),
+        grooves: grooves
+    };
+}
+
+function cmd_set_groove_amount(params) {
+    var amount = Number(param(params, "amount", 0));
+    if (amount < 0.0 || amount > 1.0) throw "Groove amount must be between 0.0 and 1.0";
+    var song = new LiveAPI("live_set");
+    song.set("groove_amount", amount);
+    return { groove_amount: apiGetNum("live_set", "groove_amount") };
+}
+
+function cmd_apply_groove(params) {
+    var clipPath = sessionClipPath(params);
+    var grooveIndex = param(params, "groove_index", 0);
+    var groovePath = "live_set groove_pool grooves " + grooveIndex;
+    var grooveApi = new LiveAPI(groovePath);
+    if (!grooveApi.id || grooveApi.id === "0") throw "Groove index out of range";
+    var clip = new LiveAPI(clipPath);
+    clip.set("groove", "id", grooveApi.id);
+    return {
+        applied: true,
+        groove_index: grooveIndex,
+        groove_name: apiGetOptionalStr(groovePath, "name")
+    };
+}
+
+function cmd_clear_clip_groove(params) {
+    var clipPath = sessionClipPath(params);
+    var clip = new LiveAPI(clipPath);
+    clip.set("groove", "id", 0);
+    return { cleared: true };
+}
+
+function cmd_get_device_sidechain(params) {
+    var trackIndex = param(params, "track_index", 0);
+    var deviceIndex = param(params, "device_index", 0);
+    var device = new LiveAPI(getTrackPath(trackIndex) + " devices " + deviceIndex);
+    if (!device.id || device.id === "0") throw "Device index out of range";
+    var typeVal;
+    var chanVal;
+    try {
+        typeVal = apiGetJson(device, "input_routing_type");
+        chanVal = apiGetJson(device, "input_routing_channel");
+    } catch (e) {
+        return { supported: false };
+    }
+    var result = {
+        supported: true,
+        input_routing_type: routingName(typeVal),
+        input_routing_channel: routingName(chanVal),
+        available_input_routing_types: [],
+        available_input_routing_channels: []
+    };
+    try {
+        var avIn = apiGetJson(device, "available_input_routing_types") || [];
+        var avCh = apiGetJson(device, "available_input_routing_channels") || [];
+        var i;
+        for (i = 0; i < avIn.length; i++) result.available_input_routing_types.push({ display_name: routingName(avIn[i]) });
+        for (i = 0; i < avCh.length; i++) result.available_input_routing_channels.push({ display_name: routingName(avCh[i]) });
+    } catch (availErr) {
+        // Device supports sidechain routing but did not expose the available-lists dict.
+    }
+    return result;
+}
+
+function cmd_set_device_sidechain(params) {
+    var trackIndex = param(params, "track_index", 0);
+    var deviceIndex = param(params, "device_index", 0);
+    var typeName = param(params, "routing_type_name", null);
+    if (typeName === null) typeName = param(params, "input_routing_type", null);
+    var channelName = param(params, "channel_name", null);
+    if (channelName === null) channelName = param(params, "input_routing_channel", null);
+    var device = new LiveAPI(getTrackPath(trackIndex) + " devices " + deviceIndex);
+    if (!device.id || device.id === "0") throw "Device index out of range";
+    try {
+        apiGetJson(device, "input_routing_type");
+    } catch (e) {
+        return { supported: false };
+    }
+    var result = { supported: true };
+    if (typeName) {
+        result.input_routing_type = setRoutingOnApi(device, "input_routing_type",
+            "available_input_routing_types", typeName, false);
+    } else {
+        result.input_routing_type = routingName(apiGetJson(device, "input_routing_type"));
+    }
+    if (channelName) {
+        result.input_routing_channel = setRoutingOnApi(device, "input_routing_channel",
+            "available_input_routing_channels", channelName, false);
+    } else {
+        try {
+            result.input_routing_channel = routingName(apiGetJson(device, "input_routing_channel"));
+        } catch (chanErr) {
+            result.input_routing_channel = "";
+        }
+    }
+    return result;
+}
+
+function cmd_get_rack_chains(params) {
+    var trackIndex = param(params, "track_index", 0);
+    var deviceIndex = param(params, "device_index", 0);
+    var devPath = getTrackPath(trackIndex) + " devices " + deviceIndex;
+    var dev = new LiveAPI(devPath);
+    if (!dev.id || dev.id === "0") throw "Device index out of range";
+    if (!apiGetOptionalNum(devPath, "can_have_chains")) throw "Device cannot have chains";
+    var count = apiGetOptionalCount(devPath, "chains");
+    var chains = [];
+    for (var i = 0; i < count; i++) {
+        var cPath = devPath + " chains " + i;
+        chains.push({
+            index: i,
+            name: apiGetOptionalStr(cPath, "name"),
+            mute: apiGetOptionalNum(cPath, "mute") ? true : false,
+            solo: apiGetOptionalNum(cPath, "solo") ? true : false,
+            volume: apiGetOptionalNum(cPath + " mixer_device volume", "value"),
+            device_count: apiGetOptionalCount(cPath, "devices")
+        });
+    }
+    return {
+        track_index: trackIndex,
+        device_index: deviceIndex,
+        chain_count: chains.length,
+        chains: chains
+    };
+}
+
+function cmd_insert_rack_chain(params) {
+    var trackIndex = param(params, "track_index", 0);
+    var deviceIndex = param(params, "device_index", 0);
+    var index = param(params, "index", -1);
+    var name = param(params, "name", null);
+    var devPath = getTrackPath(trackIndex) + " devices " + deviceIndex;
+    var device = new LiveAPI(devPath);
+    if (!device.id || device.id === "0") throw "Device index out of range";
+    if (!apiGetOptionalNum(devPath, "can_have_chains")) throw "Device cannot have chains";
+    var chainIndex = index;
+    try {
+        if (index < 0) {
+            device.call("insert_chain");
+            chainIndex = apiGetOptionalCount(devPath, "chains") - 1;
+        } else {
+            device.call("insert_chain", index);
+            chainIndex = index;
+        }
+    } catch (e) {
+        throw "insert_chain failed (requires Live 12.3+): " + e;
+    }
+    if (name && chainIndex >= 0) {
+        var chain = new LiveAPI(devPath + " chains " + chainIndex);
+        chain.set("name", name);
+    }
+    return {
+        inserted: true,
+        chain_index: chainIndex,
+        name: chainIndex >= 0 ? apiGetOptionalStr(devPath + " chains " + chainIndex, "name") : name,
+        chain_count: apiGetOptionalCount(devPath, "chains")
+    };
+}
+
+function cmd_set_chain_mixer(params) {
+    var trackIndex = param(params, "track_index", 0);
+    var deviceIndex = param(params, "device_index", 0);
+    var chainIndex = param(params, "chain_index", 0);
+    var mute = param(params, "mute", null);
+    var solo = param(params, "solo", null);
+    var volume = param(params, "volume", null);
+    var panning = param(params, "panning", null);
+    var chainPath = getTrackPath(trackIndex) + " devices " + deviceIndex + " chains " + chainIndex;
+    var chain = new LiveAPI(chainPath);
+    if (!chain.id || chain.id === "0") throw "Chain index out of range";
+    if (mute !== null) chain.set("mute", mute ? 1 : 0);
+    if (solo !== null) chain.set("solo", solo ? 1 : 0);
+    if (volume !== null) setNormalizedMixerParam(chainPath + " mixer_device volume", Number(volume), "Volume");
+    if (panning !== null) setNormalizedMixerParam(chainPath + " mixer_device panning", Number(panning), "Panning");
+    var result = {
+        track_index: trackIndex,
+        device_index: deviceIndex,
+        chain_index: chainIndex,
+        name: apiGetOptionalStr(chainPath, "name"),
+        mute: apiGetOptionalNum(chainPath, "mute") ? true : false,
+        solo: apiGetOptionalNum(chainPath, "solo") ? true : false
+    };
+    var volVal = apiGetOptionalNum(chainPath + " mixer_device volume", "value");
+    if (volVal !== null) result.volume = volVal;
+    var panVal = apiGetOptionalNum(chainPath + " mixer_device panning", "value");
+    if (panVal !== null) result.panning = panVal;
+    return result;
+}
+
+function cmd_get_rack_macros(params) {
+    var trackIndex = param(params, "track_index", 0);
+    var deviceIndex = param(params, "device_index", 0);
+    var devPath = getTrackPath(trackIndex) + " devices " + deviceIndex;
+    var dev = new LiveAPI(devPath);
+    if (!dev.id || dev.id === "0") throw "Device index out of range";
+    var paramCount = apiGetOptionalCount(devPath, "parameters");
+    var macros = [];
+    for (var i = 0; i < paramCount; i++) {
+        var pPath = devPath + " parameters " + i;
+        var pName = apiGetOptionalStr(pPath, "name") || "";
+        if (pName.indexOf("Macro") === 0) {
+            var pVal = apiGetOptionalNum(pPath, "value");
+            var pMin = apiGetOptionalNum(pPath, "min");
+            var pMax = apiGetOptionalNum(pPath, "max");
+            var normVal = 0;
+            if (pMin !== null && pMax !== null && (pMax - pMin) !== 0 && pVal !== null) {
+                normVal = (pVal - pMin) / (pMax - pMin);
+            }
+            macros.push({
+                index: i,
+                name: pName,
+                value: pVal,
+                normalized_value: normVal
+            });
+        }
+    }
+    var result = {
+        track_index: trackIndex,
+        device_index: deviceIndex,
+        macros: macros
+    };
+    var mapped = apiGetOptionalNum(devPath, "macros_mapped");
+    if (mapped === null) mapped = apiGetOptionalNum(devPath, "has_macro_mappings");
+    if (mapped !== null) result.macros_mapped = mapped ? true : false;
+    var vis = apiGetOptionalNum(devPath, "visible_macro_count");
+    if (vis !== null) result.visible_macro_count = vis;
+    return result;
+}
+
+function cmd_move_device(params) {
+    var trackIndex = param(params, "track_index", 0);
+    var deviceIndex = param(params, "device_index", 0);
+    var targetIndex = param(params, "target_index", 0);
+    var trackPath = getTrackPath(trackIndex);
+    var track = new LiveAPI(trackPath);
+    if (!track.id || track.id === "0") throw "Track index out of range";
+    var device = new LiveAPI(trackPath + " devices " + deviceIndex);
+    if (!device.id || device.id === "0") throw "Device index out of range";
+    try {
+        track.call("move_device", deviceIndex, targetIndex);
+    } catch (e) {
+        var song = new LiveAPI("live_set");
+        song.call("move_device", "id", device.id, "id", track.id, targetIndex);
+    }
+    return { moved: true, target_index: targetIndex };
+}
+
+function cmd_capture_and_insert_scene() {
+    var song = new LiveAPI("live_set");
+    song.call("capture_and_insert_scene");
+    return {
+        captured: true,
+        scene_count: apiGetCount("live_set", "scenes")
+    };
+}
+
+function cmd_crop_clip(params) {
+    var clipPath = sessionClipPath(params);
+    var clip = new LiveAPI(clipPath);
+    clip.call("crop");
+    return { cropped: true };
+}
+
+function cmd_set_clip_launch(params) {
+    var clipPath = sessionClipPath(params);
+    var clip = new LiveAPI(clipPath);
+    var launchMode = param(params, "launch_mode", null);
+    var launchQuant = param(params, "launch_quantization", null);
+    var legato = param(params, "legato", null);
+    if (launchMode !== null) clip.set("launch_mode", Math.floor(launchMode));
+    if (launchQuant !== null) clip.set("launch_quantization", Math.floor(launchQuant));
+    if (legato !== null) clip.set("legato", legato ? 1 : 0);
+    var result = {};
+    var mode = apiGetOptionalNum(clipPath, "launch_mode");
+    var quant = apiGetOptionalNum(clipPath, "launch_quantization");
+    var leg = apiGetOptionalNum(clipPath, "legato");
+    if (mode !== null) result.launch_mode = mode;
+    if (quant !== null) result.launch_quantization = quant;
+    if (leg !== null) result.legato = leg ? true : false;
+    return result;
+}
+
+function cmd_get_cue_points() {
+    var count = apiGetOptionalCount("live_set", "cue_points");
+    var points = [];
+    for (var i = 0; i < count; i++) {
+        var p = "live_set cue_points " + i;
+        points.push({
+            index: i,
+            name: apiGetOptionalStr(p, "name"),
+            time: apiGetOptionalNum(p, "time")
+        });
+    }
+    return { cue_points: points };
+}
+
+function cmd_toggle_cue() {
+    var song = new LiveAPI("live_set");
+    song.call("set_or_delete_cue");
+    return {
+        toggled: true,
+        cue_count: apiGetOptionalCount("live_set", "cue_points")
+    };
+}
+
+function cmd_jump_to_cue(params) {
+    var direction = param(params, "direction", null);
+    var index = param(params, "index", null);
+    var song = new LiveAPI("live_set");
+    if (direction === "next") {
+        song.call("jump_to_next_cue");
+        return { jumped: true, direction: "next" };
+    }
+    if (direction === "prev") {
+        song.call("jump_to_prev_cue");
+        return { jumped: true, direction: "prev" };
+    }
+    if (index !== null && index !== undefined) {
+        var cuePath = "live_set cue_points " + index;
+        var cue = new LiveAPI(cuePath);
+        if (!cue.id || cue.id === "0") throw "Cue index out of range";
+        try {
+            cue.call("jump");
+        } catch (e) {
+            song.set("current_song_time", apiGetNum(cuePath, "time"));
+        }
+        return { jumped: true, index: index };
+    }
+    throw "jump_to_cue requires direction (next/prev) or index";
+}
+
+function cmd_set_crossfader(params) {
+    var value = Number(param(params, "value", 0.5));
+    var actual = setNormalizedMixerParam("live_set master_track mixer_device crossfader", value, "Crossfader value");
+    return {
+        value: actual,
+        normalized_value: value
+    };
+}
+
+function cmd_set_crossfade_assign(params) {
+    var trackIndex = param(params, "track_index", 0);
+    var assign = Math.floor(param(params, "assign", 1));
+    var mixerPath = getTrackPath(trackIndex) + " mixer_device";
+    var mixer = new LiveAPI(mixerPath);
+    if (!mixer.id || mixer.id === "0") throw "Track index out of range";
+    mixer.set("crossfade_assign", assign);
+    return {
+        track_index: trackIndex,
+        crossfade_assign: apiGetNum(mixerPath, "crossfade_assign")
+    };
+}
+
+function cmd_show_view(params) {
+    var viewName = param(params, "view_name", "Session");
+    var view = new LiveAPI("live_app view");
+    view.call("show_view", viewName);
+    return { shown: true, view_name: viewName };
+}
+
+function cmd_get_warp_markers(params) {
+    var clipPath = sessionClipPath(params);
+    if (!apiGetOptionalNum(clipPath, "is_audio_clip")) throw "Not an audio clip";
+    var count = apiGetOptionalCount(clipPath, "warp_markers");
+    var markers = [];
+    for (var i = 0; i < count; i++) {
+        var mPath = clipPath + " warp_markers " + i;
+        markers.push({
+            index: i,
+            beat_time: apiGetOptionalNum(mPath, "beat_time"),
+            sample_time: apiGetOptionalNum(mPath, "sample_time")
+        });
+    }
+    return { warp_markers: markers };
+}
+
+function cmd_add_warp_marker(params) {
+    var clipPath = sessionClipPath(params);
+    if (!apiGetOptionalNum(clipPath, "is_audio_clip")) throw "Not an audio clip";
+    var beatTime = Number(param(params, "beat_time", 0));
+    var clip = new LiveAPI(clipPath);
+    try {
+        clip.call("add_warp_marker", beatTime);
+    } catch (e) {
+        try {
+            clip.call("add_warp_marker", JSON.stringify({ beat_time: beatTime }));
+        } catch (e2) {
+            throw "add_warp_marker not present on this clip: " + e;
+        }
+    }
+    return { added: true, beat_time: beatTime };
 }

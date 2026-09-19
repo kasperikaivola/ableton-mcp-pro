@@ -1,4 +1,4 @@
-# Ableton MCP Extended - Development Guide
+# Ableton MCP Pro - Development Guide
 
 Everything learned from developing and extending this Ableton Live MCP integration.
 
@@ -6,7 +6,7 @@ Everything learned from developing and extending this Ableton Live MCP integrati
 
 The system has three components:
 
-1. **MCP Server** (`MCP_Server/server.py`) — A FastMCP Python server that Claude (or any MCP client) communicates with. It exposes tools like `get_session_info`, `create_clip`, `set_device_parameter`, etc. When a tool is called, it opens a TCP socket connection to the Remote Script running inside Ableton.
+1. **MCP Server** (MCP_Server/server.py) — A FastMCP Python server that any MCP-capable agent communicates with.
 
 2. **Remote Script** (`AbletonMCP_Remote_Script/__init__.py`) — A Python `ControlSurface` script that runs inside Ableton Live. It listens on TCP port **9877** for JSON commands from the MCP server. It has direct access to the Ableton Live Object Model (LOM) — tracks, clips, devices, parameters, etc.
 
@@ -15,11 +15,18 @@ The system has three components:
 ### Communication Flow
 
 ```
-Claude → MCP Server (FastMCP) → TCP socket (port 9877) → Remote Script (inside Ableton)
+MCP-capable agent → MCP Server (FastMCP) → TCP socket (port 9877) → Remote Script (inside Ableton)
 ```
 
 Commands are JSON objects: `{"command": "command_name", "params": {...}}`
 Responses are JSON objects: `{"status": "success", "result": {...}}`
+
+## Provider-neutral skill discovery
+
+The MCP server supports MCP-capable agents and is provider-neutral. Claude discovers `.claude/skills/`; Codex discovers `.agents/skills/`. These roots must contain byte-for-byte identical `SKILL.md` files. Check the mirror after skill changes:
+
+    python tools/check_skill_mirrors.py
+
 
 ## Max for Live Device (Alternative to Remote Script)
 
@@ -39,16 +46,16 @@ They communicate via Max messages passing JSON strings (not dicts — see quirks
 
 ### Installation
 
-1. Build the device: `python3 MaxForLive/build_amxd.py`
-2. Copy files to User Library:
+1. Build and install the device (macOS and Windows):
    ```bash
-   mkdir -p ~/Music/Ableton/User\ Library/Presets/Audio\ Effects/Max\ Audio\ Effect/AbletonMCP/
-   cp MaxForLive/AbletonMCP.amxd ~/Music/Ableton/User\ Library/Presets/Audio\ Effects/Max\ Audio\ Effect/AbletonMCP/
-   cp MaxForLive/code/tcp-server.js ~/Music/Ableton/User\ Library/Presets/Audio\ Effects/Max\ Audio\ Effect/AbletonMCP/
-   cp MaxForLive/code/lom-handler.js ~/Music/Ableton/User\ Library/Presets/Audio\ Effects/Max\ Audio\ Effect/AbletonMCP/
+   python MaxForLive/build_amxd.py --install
    ```
-3. In Ableton, drag `AbletonMCP` from the browser onto any track
-4. Check the Max console for "AbletonMCP: Listening on port 9878"
+   Default destinations:
+   - macOS: `~/Music/Ableton/User Library/Presets/Audio Effects/Max Audio Effect/AbletonMCP/`
+   - Windows: `%USERPROFILE%\Documents\Ableton\User Library\Presets\Audio Effects\Max Audio Effect\AbletonMCP\`
+   Override with `--user-library`, `ABLETON_USER_LIBRARY`, or `--install-dir`.
+2. In Ableton, drag `AbletonMCP` from the browser onto any track
+3. Check the Max console for "AbletonMCP: Listening on port 9878"
 
 **JS files must be flat next to the .amxd** — subfolder paths don't resolve reliably for unfrozen devices.
 
@@ -57,7 +64,7 @@ They communicate via Max messages passing JSON strings (not dicts — see quirks
 `lom-handler.js` sets `autowatch = 1`, so the `js` object reloads it whenever the copy in the User Library changes on disk — no restart needed for LOM handler changes. Note the queue and any in-flight `record_arrangement` are reset on reload.
 
 `node.script` caches `tcp-server.js` aggressively. After changing it:
-1. Copy updated files to the User Library path above
+1. Re-run `python MaxForLive/build_amxd.py --install`
 2. **Fully quit and reopen Ableton** — deleting and re-dragging the device is NOT enough
 3. Verify "Listening on port 9878" appears in Max console
 
@@ -327,7 +334,7 @@ DS instruments (DS Kick, DS Snare, etc.) respond to any MIDI note — pitch 60 w
 
 ## Arrangement Recording
 
-The LOM does NOT support creating arrangement clips directly — they are read-only. The only way to build an arrangement is to **record session clips into the arrangement**.
+The MCP exposes direct arrangement audio/MIDI clip insertion, inline MIDI notes, readback, and deletion. Use `record_arrangement` when the workflow specifically needs to capture timed session-scene playback; the public LOM still lacks higher-level timeline operations.
 
 ### Available Commands
 
@@ -394,7 +401,7 @@ Do NOT use `set_track_mute` during recording to create sections. Muting silences
 
 ### Erasing Arrangement Content
 
-There's no API to delete arrangement clips. To erase leftover content, record an empty scene (one with no clips) over the section you want to clear. **Important: disarm all tracks first**, otherwise armed tracks will record stray MIDI input during the erase.
+Use `delete_arrangement_clip(track_index, arrangement_clip_index)` to remove an individual arrangement clip. For broad regions or workflows that must preserve session timing, record an empty scene (one with no clips) over the section you want to clear. **Important: disarm all tracks first**, otherwise armed tracks will record stray MIDI input during the erase.
 
 ```python
 # Disarm all tracks
@@ -471,17 +478,17 @@ The cached `self._song = self.song()` reference becomes invalid when Ableton swa
 
 `set_song_time(time)` often doesn't land at the requested position on the first call. The Remote Script now retries up to 5 times with a tolerance of 0.5 beats. Still sometimes needs `set_back_to_arranger()` called first.
 
-### No Arrangement Clip Deletion
+### Arrangement editing boundary
 
-Cannot delete or trim individual arrangement clips via the API. Only workaround is recording an empty scene (no clips) over the section to erase it.
+Direct arrangement audio/MIDI clip insertion, note insertion, and deletion are exposed. The public Live LOM still does not provide every higher-level timeline operation; see MISSING_FEATURES.md for the current boundary.
 
 ### Recording Timing (Solved)
 
 Scene transitions previously drifted ~4 beats due to `do_on_main` round-trip latency causing late fires that 1-bar quantization pushed to the next bar. Fixed by using `fire_and_forget` (`schedule_message(0, fn)` without waiting) for scene fires. Fires 2 beats before the target boundary; quantization snaps to the correct bar. Pre-scheduling via `schedule_message(ticks, fn)` was also tried but failed — the tick rate is unreliable and caused early fires.
 
-### Arrangement Clips Are Read-Only
+### Arrangement automation boundary
 
-The LOM only supports reading arrangement clips, not creating/modifying/deleting them. The only way to build an arrangement is recording from session view. The only way to erase is recording silence.
+Automation remains a session-clip workflow and is baked into recordings; direct arrangement envelope editing is not exposed by the current public LOM.
 
 ## Clip Automation
 

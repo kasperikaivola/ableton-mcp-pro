@@ -1,6 +1,6 @@
 # Ableton MCP Pro
 
-Full control of Ableton Live through AI assistants via the Model Context Protocol (MCP). Create tracks, program MIDI, load instruments, mix, automate, and record arrangements — all from natural language.
+Full control of Ableton Live through MCP-capable agents. Create tracks, program MIDI, load instruments, mix, automate, and record arrangements — all from natural language.
 
 ### Demo Tracks
 
@@ -14,13 +14,13 @@ Forked from [uisato/ableton-mcp-extended](https://github.com/uisato/ableton-mcp-
 
 This fork adds significant capabilities beyond the original:
 
-- **Direct arrangement editing** — Read, place, and delete clips in arrangement view without going through session-view recording. Drop audio samples by file path and MIDI clips with notes seeded inline.
+- **Direct arrangement editing** — Read, place, and delete clips in arrangement view, including MIDI note insertion, without a session-view round trip.
 - **Arrangement recording** — Record session clips into the arrangement with bar-accurate scene transitions, with `start_time` to append past existing material
 - **Arrangement view** — Read arrangement info, clips per track (with `file_path` for audio clips), full arrangement state; control loop, overdub, song position, and back-to-arranger
 - **Arrangement playback** — Dedicated `play_arrangement` command that switches to arrangement view
 - **Smooth automation envelopes** — Interpolated ramps between points (not just flat steps)
 - **Full mixing** — Volume, panning, sends, mute, solo, arm for all tracks including master and returns
-- **Master/return track support** — Use `track_index: -1` for master, `-2`/`-3` for return tracks across all mixing commands
+- **Group, return, and master robustness** — consistent indexing and guarded operations across track classes
 - **Scene management** — Create, delete, rename, and fire scenes for arrangement workflows
 - **Track management** — Create/delete/duplicate MIDI and audio tracks
 - **Clip operations** — Duplicate, delete, rename, loop control, get/set notes
@@ -33,7 +33,7 @@ See [NEXT_STEPS.md](NEXT_STEPS.md) for the full feature list and roadmap.
 
 ## Music Production Skills
 
-When used with [Claude Code](https://claude.com/claude-code), this project includes 20 production skills that guide Claude through genre-specific workflows — from sound design to pattern programming to mixing. Each skill provides specific, actionable parameter values.
+This project supports MCP-capable agents and includes 20 production skills for genre-specific workflows — from sound design to pattern programming to mixing. Claude discovers `.claude/skills/`; Codex discovers `.agents/skills/`. Both trees must contain exact byte-for-byte mirrors, checked with `python tools/check_skill_mirrors.py`.
 
 ### Available Skills
 
@@ -108,14 +108,21 @@ You should see "AbletonMCP: Listening for commands on port 9877" in the status b
 If you have Live Suite (or the Max for Live add-on), you can skip the Remote Script install and use the drag-and-drop device instead:
 
 ```bash
-python3 MaxForLive/build_amxd.py
-D=~/Music/Ableton/User\ Library/Presets/Audio\ Effects/Max\ Audio\ Effect/AbletonMCP
-mkdir -p "$D" && cp MaxForLive/AbletonMCP.amxd MaxForLive/code/*.js "$D/"
+python MaxForLive/build_amxd.py --install
 ```
 
-Drag **AbletonMCP** from the browser (User Library > Presets > Audio Effects > Max Audio Effect) onto any track. It listens on port **9878**, so set `ABLETON_PORT=9878` in the MCP server's environment. The device supports everything except the browser tools (`get_browser_tree`, `get_browser_items_at_path`, `load_instrument_or_effect`), which Max for Live's Live API does not expose. Both backends can run at the same time. See [DEVELOPMENT.md](DEVELOPMENT.md#max-for-live-device-alternative-to-remote-script).
+This builds the `.amxd` and copies it plus the JS files (flat, not in a `code/` subfolder) into the Ableton User Library:
+
+- **macOS:** `~/Music/Ableton/User Library/Presets/Audio Effects/Max Audio Effect/AbletonMCP`
+- **Windows:** `%USERPROFILE%\Documents\Ableton\User Library\Presets\Audio Effects\Max Audio Effect\AbletonMCP`
+
+Override the User Library root with `--user-library` or `ABLETON_USER_LIBRARY`, or pass `--install-dir` for an exact destination.
+
+Drag **AbletonMCP** from the browser (User Library > Presets > Audio Effects > Max Audio Effect) onto any track. It listens on port **9878**, so set `ABLETON_PORT=9878` in the MCP server's environment. The device supports a broad subset of the Remote Script command set. Browser tools (`get_browser_tree`, `get_browser_items_at_path`, `load_instrument_or_effect`) are Remote Script only because Max for Live's Live API does not expose the browser. Arrangement and track queries also differ slightly by backend, so validate a workflow on the backend you use. Both backends can run at the same time. See [DEVELOPMENT.md](DEVELOPMENT.md#max-for-live-device-alternative-to-remote-script).
 
 ### 4. Connect your AI assistant
+
+Any MCP-capable agent can connect with the same MCP server command and arguments. The examples below show common clients.
 
 #### Claude Code (CLI)
 
@@ -184,10 +191,10 @@ AI Assistant --> MCP Server (Python) --> TCP socket (port 9877) --> Remote Scrip
 ## Available Tools
 
 ### Read
-`get_session_info`, `get_track_info`, `get_device_parameters`, `get_arrangement_info`, `get_arrangement_clips`, `get_full_arrangement`, `get_clip_notes`, `get_arrangement_clip_notes`, `get_clip_envelope`, `get_browser_tree`, `get_browser_items_at_path`, `get_drum_pads`, `get_clip_info`
+`get_session_info`, `get_track_info`, `get_device_parameters`, `get_arrangement_info`, `get_arrangement_clips`, `get_full_arrangement`, `get_clip_notes`, `get_arrangement_clip_notes`, `get_clip_envelope`, `get_browser_tree`, `get_browser_items_at_path`, `get_drum_pads`, `get_clip_info`, `get_groove_pool`, `get_device_sidechain`, `get_rack_chains`, `get_rack_macros`, `get_cue_points`, `get_warp_markers`
 
 ### Modify
-`create_midi_track`, `create_audio_track`, `create_clip`, `create_arrangement_audio_clips_batch`, `resample_master`, `add_notes_to_clip`, `set_clip_name`, `set_clip_loop`, `delete_clip`, `delete_arrangement_clip`, `duplicate_clip`, `delete_track`, `duplicate_track`, `set_track_name`, `set_track_volume`, `set_track_panning`, `set_track_mute`, `set_track_solo`, `set_track_arm`, `set_send_level`, `set_tempo`, `set_time_signature`, `set_metronome`, `fire_clip`, `stop_clip`, `fire_scene`, `create_scene`, `delete_scene`, `set_scene_name`, `start_playback`, `stop_playback`, `play_arrangement`, `load_instrument_or_effect`, `set_device_parameter`, `batch_set_device_parameters`, `delete_device`, `set_song_time`, `set_record_mode`, `set_arrangement_overdub`, `set_back_to_arranger`, `set_arrangement_loop`, `set_clip_envelope`, `clear_clip_envelope`, `undo`, `redo`, `remove_notes`, `quantize_clip`, `duplicate_clip_loop`, `duplicate_region`, `set_device_enabled`, `create_return_track`, `delete_return_track`, `stop_all_clips`, `set_clip_gain`, `set_clip_pitch`, `set_clip_warping`, `set_clip_warp_mode`
+`create_midi_track`, `create_audio_track`, `create_clip`, `create_arrangement_audio_clips_batch`, `resample_master`, `add_notes_to_clip`, `capture_midi`, `capture_and_insert_scene`, `set_clip_name`, `set_clip_loop`, `crop_clip`, `set_clip_launch`, `delete_clip`, `delete_arrangement_clip`, `duplicate_clip`, `delete_track`, `duplicate_track`, `move_device`, `set_track_name`, `set_track_volume`, `set_track_panning`, `set_track_mute`, `set_track_solo`, `set_track_arm`, `set_send_level`, `set_crossfader`, `set_crossfade_assign`, `set_tempo`, `set_time_signature`, `set_metronome`, `fire_clip`, `stop_clip`, `fire_scene`, `create_scene`, `delete_scene`, `set_scene_name`, `start_playback`, `stop_playback`, `play_arrangement`, `load_instrument_or_effect`, `set_device_parameter`, `batch_set_device_parameters`, `delete_device`, `set_device_sidechain`, `insert_rack_chain`, `set_chain_mixer`, `apply_groove`, `clear_clip_groove`, `set_groove_amount`, `toggle_cue`, `jump_to_cue`, `show_view`, `add_warp_marker`, `set_song_time`, `set_record_mode`, `set_arrangement_overdub`, `set_back_to_arranger`, `set_arrangement_loop`, `set_clip_envelope`, `clear_clip_envelope`, `undo`, `redo`, `remove_notes`, `quantize_clip`, `duplicate_clip_loop`, `duplicate_region`, `set_device_enabled`, `create_return_track`, `delete_return_track`, `stop_all_clips`, `set_clip_gain`, `set_clip_pitch`, `set_clip_warping`, `set_clip_warp_mode`
 
 ### Arrangement
 The arrangement view supports a **full read-modify-write loop directly**, no session-view round-trip required:
@@ -240,9 +247,11 @@ to generate melody continuations. The agent reads a clip with
 
 ## Known Limitations
 
-- **Arrangement clips are read-only** — The LOM can't create/delete arrangement clips directly. Use `record_arrangement` to record from session, or record an empty scene to erase.
+- **Arrangement editing has a bounded LOM surface** — Direct audio/MIDI clip insertion, inline MIDI notes, readback, and deletion are supported; higher-level timeline operations remain unavailable.
 - **Session-view audio clips** — `ClipSlot.create_clip()` only accepts a length (for MIDI clips), not file paths, so samples can only be placed in the arrangement (`create_arrangement_audio_clip`).
 - **No audio export** — Live has no export command; `resample_master` records the main mix through a Resampling track instead.
+- **Set and track structure control** — The public LOM does not expose save-set, insert-time, or track reparent/create-group operations.
+- **Analysis and routing gaps** — Sidechain source selection and LUFS/true-peak analysis are not exposed.
 - **Stale song reference** — First command after an Ableton restart may fail (retry works). The script auto-refreshes its internal reference.
 
 ## Development

@@ -1,15 +1,20 @@
 #!/usr/bin/env python3
 """Build a valid .amxd file with the required binary header."""
+import argparse
 import json
-import struct
 import os
+import platform
+import shutil
+import struct
 import time
+from pathlib import Path
 
 DEVICE_TYPE_AUDIO_EFFECT = 0x61616161  # 'aaaa'
 
 # TCP port the device listens on. 9878 by default so it can coexist with the
 # Python Remote Script (9877). Point the MCP server at it with ABLETON_PORT=9878.
 PORT = 9878
+DEVICE_PRESET_RELATIVE = Path("Presets") / "Audio Effects" / "Max Audio Effect" / "AbletonMCP"
 
 patcher = {
     "patcher": {
@@ -197,7 +202,97 @@ def build_amxd(output_path, device_type, patcher_dict):
 
     print(f"Built {output_path} ({len(header) + len(json_bytes) + 1} bytes)")
 
-if __name__ == '__main__':
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    output = os.path.join(script_dir, 'AbletonMCP.amxd')
-    build_amxd(output, DEVICE_TYPE_AUDIO_EFFECT, patcher)
+
+def user_library_root(*, system=None, home=None, env=None):
+    env = os.environ if env is None else env
+    override = env.get("ABLETON_USER_LIBRARY")
+    if override:
+        return Path(override)
+    system = system or platform.system()
+    home = Path.home() if home is None else Path(home)
+    if system == "Windows":
+        candidates = [
+            home / "Documents" / "Ableton" / "User Library",
+            home / "OneDrive" / "Documents" / "Ableton" / "User Library",
+        ]
+        for candidate in candidates:
+            if candidate.is_dir():
+                return candidate
+        return candidates[0]
+    return home / "Music" / "Ableton" / "User Library"
+
+
+def device_install_dir(*, system=None, home=None, env=None, user_library=None):
+    root = Path(user_library) if user_library is not None else user_library_root(
+        system=system, home=home, env=env
+    )
+    return root / DEVICE_PRESET_RELATIVE
+
+
+def install_device(source_dir, dest_dir):
+    source_dir = Path(source_dir)
+    dest_dir = Path(dest_dir)
+    amxd = source_dir / "AbletonMCP.amxd"
+    if not amxd.is_file():
+        raise FileNotFoundError(f"Built device not found: {amxd}")
+    js_dir = source_dir / "code"
+    js_files = sorted(js_dir.glob("*.js")) if js_dir.is_dir() else []
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    leftover = dest_dir / "code"
+    if leftover.is_dir():
+        shutil.rmtree(leftover)
+    copied = []
+    for src in [amxd, *js_files]:
+        dest = dest_dir / src.name
+        if dest.exists() or dest.is_symlink():
+            dest.unlink()
+        shutil.copy2(src, dest)
+        copied.append(dest)
+    return copied
+
+
+def parse_args(argv=None):
+    parser = argparse.ArgumentParser(
+        description="Build the AbletonMCP Max for Live device."
+    )
+    parser.add_argument(
+        "--install",
+        action="store_true",
+        help="Copy the device and JS files into the Ableton User Library.",
+    )
+    parser.add_argument(
+        "--install-dir",
+        type=Path,
+        help="Copy into this folder instead of the default User Library path.",
+    )
+    parser.add_argument(
+        "--user-library",
+        type=Path,
+        help="Ableton User Library root. Overrides ABLETON_USER_LIBRARY.",
+    )
+    return parser.parse_args(argv)
+
+
+def main(argv=None):
+    args = parse_args(argv)
+    script_dir = Path(__file__).resolve().parent
+    output = script_dir / "AbletonMCP.amxd"
+    build_amxd(str(output), DEVICE_TYPE_AUDIO_EFFECT, patcher)
+    dest = (
+        args.install_dir
+        if args.install_dir is not None
+        else device_install_dir(user_library=args.user_library)
+    )
+    if not args.install and args.install_dir is None:
+        print(f"To install into Ableton: python {Path(__file__).name} --install")
+        print(f"Destination: {dest}")
+        return
+    copied = install_device(script_dir, dest)
+    print(f"Installed {len(copied)} files to {dest}")
+    for path in copied:
+        print(f"  {path.name}")
+
+
+if __name__ == "__main__":
+    main()
+

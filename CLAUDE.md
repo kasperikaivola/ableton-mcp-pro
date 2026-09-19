@@ -1,5 +1,7 @@
 # Ableton MCP Pro
 
+This file is the Claude adapter for the project, not the canonical workflow contract. Use [AGENTS.md](AGENTS.md) for provider-neutral guidance; Claude discovers `.claude/skills/`, while Codex and other MCP-capable agents discover the exact mirror in `.agents/skills/`.
+
 Control Ableton Live through MCP tools. This project has two parts:
 
 1. **Remote Script** (`AbletonMCP_Remote_Script/__init__.py`) — runs inside Ableton, listens on TCP port 9877
@@ -11,11 +13,11 @@ Control Ableton Live through MCP tools. This project has two parts:
 - **Parameter values**: Always normalized 0.0–1.0, regardless of actual range
 - **Clip positions**: In beats (4.0 = 1 bar at 4/4)
 - **MIDI notes**: pitch 0–127 (C3=48, C4=60), velocity 0–127
-- **Arrangement is read-only** — can only populate via `record_arrangement` from session clips
+- **Arrangement editing** — direct audio/MIDI clip insertion is supported; use record_arrangement for session-based recording and keep LOM limits in mind
 
 ## Music Production Skills
 
-20 skills in `.claude/skills/` activate automatically based on what the user asks for. They cover genres (techno, house, trance, garage, bass music, ambient, synthwave) and production workflows (mixing, arrangement, swing).
+Claude discovers 20 skills in .claude/skills/; .agents/skills/ is the byte-for-byte mirror for other MCP-capable agents.
 
 See [SKILL_AUTHORING_GUIDE.md](SKILL_AUTHORING_GUIDE.md) for creating new skills.
 

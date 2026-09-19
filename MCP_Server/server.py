@@ -111,7 +111,7 @@ class AbletonConnection:
             "batch_set_device_parameters",
             "start_playback", "stop_playback", "load_instrument_or_effect",
             "load_browser_item", "set_track_volume", "set_track_panning",
-            "fire_scene", "set_song_time", "set_record_mode",
+            "play_arrangement", "fire_scene", "set_song_time", "set_record_mode",
             "set_arrangement_overdub", "set_back_to_arranger",
             "set_arrangement_loop",
             "set_track_mute", "set_track_solo",
@@ -120,10 +120,20 @@ class AbletonConnection:
             "delete_track", "record_arrangement",
             "delete_device", "duplicate_track", "set_clip_loop",
             "set_track_arm", "set_send_level", "set_time_signature",
-            "set_track_monitoring", "get_track_routing",
+            "set_track_monitoring",
             "set_track_input_routing", "set_track_output_routing", "set_metronome",
             "set_clip_envelope", "clear_clip_envelope",
-            "undo", "redo"
+            "undo", "redo", "capture_midi",
+            "create_arrangement_audio_clips_batch", "remove_notes",
+            "quantize_clip", "duplicate_clip_loop", "duplicate_region",
+            "set_device_enabled", "create_return_track", "delete_return_track",
+            "stop_all_clips", "set_clip_gain", "set_clip_pitch",
+            "set_clip_warping", "set_clip_warp_mode", "resample_master",
+            "move_device", "set_groove_amount", "apply_groove", "clear_clip_groove",
+            "set_device_sidechain", "insert_rack_chain", "set_chain_mixer",
+            "capture_and_insert_scene", "crop_clip", "set_clip_launch",
+            "toggle_cue", "jump_to_cue", "set_crossfader", "set_crossfade_assign",
+            "show_view", "add_warp_marker"
         ]
         
         try:
@@ -141,6 +151,8 @@ class AbletonConnection:
             # Set timeout based on command type
             if command_type == "record_arrangement":
                 timeout = 600.0  # 10 minutes for arrangement recording
+            elif command_type == "resample_master":
+                timeout = 600.0  # 10 minutes for real-time master resampling
             elif is_modifying_command:
                 timeout = 15.0
             else:
@@ -301,7 +313,8 @@ def get_track_info(ctx: Context, track_index: int) -> str:
     Get detailed information about a specific track in Ableton.
     
     Parameters:
-    - track_index: The index of the track to get information about
+    - track_index: 0+ for regular tracks; -1 for the master track; -2 for
+                   Return A, -3 for Return B, and so on for additional returns.
     """
     try:
         ableton = get_ableton_connection()
@@ -496,24 +509,37 @@ def add_notes_to_clip(
     ctx: Context, 
     track_index: int, 
     clip_index: int, 
-    notes: List[Dict[str, Union[int, float, bool]]]
+    notes: List[Dict[str, Union[int, float, bool]]],
+    arrangement_clip_index: Optional[int] = None,
 ) -> str:
     """
-    Add MIDI notes to a clip.
+    Add MIDI notes to a session clip or an arrangement clip.
     
     Parameters:
-    - track_index: The index of the track containing the clip
-    - clip_index: The index of the clip slot containing the clip
-    - notes: List of note dictionaries, each with pitch, start_time, duration, velocity, and mute
+    - track_index: The track containing the target clip.
+    - clip_index: The session clip-slot index. Used when arrangement_clip_index is omitted.
+    - arrangement_clip_index: Optional index into the track's arrangement clips. When
+                              provided, notes are added to that arrangement clip instead
+                              of the session slot; clip_index is ignored.
+    - notes: Note dictionaries with pitch, start_time, duration, velocity, and optional mute.
+             start_time is relative to the beginning of the target clip.
+
+    If arrangement_clip_index is omitted, this preserves the original session-clip
+    behavior and response.
     """
     try:
         ableton = get_ableton_connection()
-        result = ableton.send_command("add_notes_to_clip", {
+        params = {
             "track_index": track_index,
             "clip_index": clip_index,
             "notes": notes
-        })
-        return f"Added {len(notes)} notes to clip at track {track_index}, slot {clip_index}"
+        }
+        if arrangement_clip_index is not None:
+            params["arrangement_clip_index"] = arrangement_clip_index
+        ableton.send_command("add_notes_to_clip", params)
+        if arrangement_clip_index is None:
+            return f"Added {len(notes)} notes to clip at track {track_index}, slot {clip_index}"
+        return f"Added {len(notes)} notes to arrangement clip {arrangement_clip_index} on track {track_index}"
     except Exception as e:
         logger.error(f"Error adding notes to clip: {str(e)}")
         return f"Error adding notes to clip: {str(e)}"
@@ -638,6 +664,9 @@ def load_instrument_or_effect(ctx: Context, track_index: int, uri: str, clip_ind
     Load an instrument or effect onto a track using its URI.
     Use track_index -1 for the master track.
 
+    MIDI effects (Chord, Scale, Arpeggiator) load via get_browser_items_at_path("midi_effects")
+    then this tool; then move_device to place them before the instrument.
+
     Parameters:
     - track_index: The index of the track to load on (-1 for master)
     - uri: The URI of the instrument or effect to load (e.g., 'query:Synths#Instrument%20Rack:Bass:FileId_5116')
@@ -723,6 +752,25 @@ def play_arrangement(ctx: Context, time: float = 0.0) -> str:
         return f"Error playing arrangement: {str(e)}"
 
 @mcp.tool()
+def capture_midi(ctx: Context, destination: int = 0) -> str:
+    """Capture recently played MIDI into a new clip.
+
+    Parameters:
+    - destination: Capture destination: 0 = auto (Ableton chooses based on the
+                   playback context), 1 = session, or 2 = arrangement.
+    """
+    if isinstance(destination, bool) or not isinstance(destination, int) or destination not in (0, 1, 2):
+        return "Error capturing MIDI: destination must be 0 (auto), 1 (session), or 2 (arrangement)"
+    try:
+        result = get_ableton_connection().send_command("capture_midi", {
+            "destination": destination
+        })
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error capturing MIDI: {str(e)}")
+        return f"Error capturing MIDI: {str(e)}"
+
+@mcp.tool()
 def start_playback(ctx: Context) -> str:
     """Start playing the Ableton session."""
     try:
@@ -750,7 +798,10 @@ def get_browser_tree(ctx: Context, category_type: str = "all") -> str:
     Get a hierarchical tree of browser categories from Ableton.
     
     Parameters:
-    - category_type: Type of categories to get ('all', 'instruments', 'sounds', 'drums', 'audio_effects', 'midi_effects')
+    - category_type: Type of categories to get ('all', 'instruments', 'sounds', 'drums',
+                     'audio_effects', 'midi_effects', 'user_folders').
+                     user_folders lists Places roots (e.g. user_folders/AudioAssets).
+                     Remote Script only — the Max for Live backend does not expose Places.
     """
     try:
         ableton = get_ableton_connection()
@@ -814,7 +865,9 @@ def get_browser_items_at_path(ctx: Context, path: str) -> str:
     
     Parameters:
     - path: Path in the format "category/folder/subfolder"
-            where category is one of the available browser categories in Ableton
+            where category is one of the available browser categories in Ableton.
+            user_folders lists Places roots (e.g. user_folders/AudioAssets).
+            Remote Script only.
     """
     try:
         ableton = get_ableton_connection()
@@ -1477,74 +1530,92 @@ def set_metronome(ctx: Context, on: bool) -> str:
         return f"Error setting metronome: {str(e)}"
 
 @mcp.tool()
-def set_clip_envelope(ctx: Context, track_index: int, clip_index: int, device_index: int, parameter_index: int, points: List[dict]) -> str:
+def set_clip_envelope(ctx: Context, track_index: int, clip_index: int, device_index: int, parameter_index: int, points: List[dict], arrangement_clip_index: Optional[int] = None) -> str:
     """
     Set automation envelope points for a parameter in a clip.
 
     Parameters:
     - track_index: The index of the track
-    - clip_index: The index of the clip slot
+    - clip_index: The session clip-slot index. Used when arrangement_clip_index is omitted.
     - device_index: The index of the device
     - parameter_index: The index of the parameter
     - points: List of {"time": float, "value": float} where value is normalized 0.0-1.0
+    - arrangement_clip_index: Optional index into the track's arrangement clips (same as
+                              add_notes_to_clip). When provided, addresses that arrangement
+                              MIDI/audio clip instead of the session slot.
     """
     try:
         ableton = get_ableton_connection()
-        result = ableton.send_command("set_clip_envelope", {
+        params = {
             "track_index": track_index,
             "clip_index": clip_index,
             "device_index": device_index,
             "parameter_index": parameter_index,
             "points": points
-        })
+        }
+        if arrangement_clip_index is not None:
+            params["arrangement_clip_index"] = arrangement_clip_index
+        result = ableton.send_command("set_clip_envelope", params)
         return f"Set {result.get('points_set', 0)} automation points for '{result.get('parameter_name', '')}'"
     except Exception as e:
         logger.error(f"Error setting clip envelope: {str(e)}")
         return f"Error setting clip envelope: {str(e)}"
 
 @mcp.tool()
-def get_clip_envelope(ctx: Context, track_index: int, clip_index: int, device_index: int, parameter_index: int) -> str:
+def get_clip_envelope(ctx: Context, track_index: int, clip_index: int, device_index: int, parameter_index: int, arrangement_clip_index: Optional[int] = None) -> str:
     """
     Read automation envelope data for a parameter in a clip.
 
     Parameters:
     - track_index: The index of the track
-    - clip_index: The index of the clip slot
+    - clip_index: The session clip-slot index. Used when arrangement_clip_index is omitted.
     - device_index: The index of the device
     - parameter_index: The index of the parameter
+    - arrangement_clip_index: Optional index into the track's arrangement clips (same as
+                              add_notes_to_clip). When provided, addresses that arrangement
+                              MIDI/audio clip instead of the session slot.
     """
     try:
         ableton = get_ableton_connection()
-        result = ableton.send_command("get_clip_envelope", {
+        params = {
             "track_index": track_index,
             "clip_index": clip_index,
             "device_index": device_index,
             "parameter_index": parameter_index
-        })
+        }
+        if arrangement_clip_index is not None:
+            params["arrangement_clip_index"] = arrangement_clip_index
+        result = ableton.send_command("get_clip_envelope", params)
         return json.dumps(result, indent=2)
     except Exception as e:
         logger.error(f"Error getting clip envelope: {str(e)}")
         return f"Error getting clip envelope: {str(e)}"
 
 @mcp.tool()
-def clear_clip_envelope(ctx: Context, track_index: int, clip_index: int, device_index: int, parameter_index: int) -> str:
+def clear_clip_envelope(ctx: Context, track_index: int, clip_index: int, device_index: int, parameter_index: int, arrangement_clip_index: Optional[int] = None) -> str:
     """
     Clear automation envelope for a parameter in a clip.
 
     Parameters:
     - track_index: The index of the track
-    - clip_index: The index of the clip slot
+    - clip_index: The session clip-slot index. Used when arrangement_clip_index is omitted.
     - device_index: The index of the device
     - parameter_index: The index of the parameter
+    - arrangement_clip_index: Optional index into the track's arrangement clips (same as
+                              add_notes_to_clip). When provided, addresses that arrangement
+                              MIDI/audio clip instead of the session slot.
     """
     try:
         ableton = get_ableton_connection()
-        result = ableton.send_command("clear_clip_envelope", {
+        params = {
             "track_index": track_index,
             "clip_index": clip_index,
             "device_index": device_index,
             "parameter_index": parameter_index
-        })
+        }
+        if arrangement_clip_index is not None:
+            params["arrangement_clip_index"] = arrangement_clip_index
+        result = ableton.send_command("clear_clip_envelope", params)
         return f"Cleared automation for '{result.get('parameter_name', '')}'"
     except Exception as e:
         logger.error(f"Error clearing clip envelope: {str(e)}")
@@ -1848,6 +1919,343 @@ def set_track_output_routing(ctx: Context, track_index: int, routing_type_name: 
     except Exception as e:
         logger.error(f"Error setting output routing: {str(e)}")
         return f"Error setting output routing: {str(e)}"
+
+# ---- groove, racks, sidechain, cues, views, warp markers ----
+
+@mcp.tool()
+def get_groove_pool(ctx: Context) -> str:
+    """List grooves in the song Groove Pool (index, name). Pass the index to apply_groove."""
+    try:
+        result = get_ableton_connection().send_command("get_groove_pool")
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error getting groove pool: {str(e)}")
+        return f"Error getting groove pool: {str(e)}"
+
+@mcp.tool()
+def get_device_sidechain(ctx: Context, track_index: int, device_index: int) -> str:
+    """Read external sidechain routing on a CompressorDevice (Compressor, Glue Compressor).
+
+    Returns available routing types/channels and the current source. Other device classes
+    have no sidechain API. track_index -1 = master, -2/-3 = returns.
+    """
+    try:
+        result = get_ableton_connection().send_command("get_device_sidechain", {
+            "track_index": track_index, "device_index": device_index})
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error getting device sidechain: {str(e)}")
+        return f"Error getting device sidechain: {str(e)}"
+
+@mcp.tool()
+def get_rack_chains(ctx: Context, track_index: int, device_index: int) -> str:
+    """List chains inside an Instrument/Audio/MIDI/Drum Rack: names, mixer, nested devices.
+
+    Creating macro maps is GUI-only. Use insert_rack_chain (Live 12.3+) to add chains.
+    """
+    try:
+        result = get_ableton_connection().send_command("get_rack_chains", {
+            "track_index": track_index, "device_index": device_index})
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error getting rack chains: {str(e)}")
+        return f"Error getting rack chains: {str(e)}"
+
+@mcp.tool()
+def get_rack_macros(ctx: Context, track_index: int, device_index: int) -> str:
+    """Read a rack's macro names and values.
+
+    Creating or changing which parameters are mapped to macros is GUI-only; this tool
+    cannot add mappings. Use set_device_parameter to change an existing macro's value.
+    """
+    try:
+        result = get_ableton_connection().send_command("get_rack_macros", {
+            "track_index": track_index, "device_index": device_index})
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error getting rack macros: {str(e)}")
+        return f"Error getting rack macros: {str(e)}"
+
+@mcp.tool()
+def get_cue_points(ctx: Context) -> str:
+    """List arrangement cue points (name, time in beats). Use jump_to_cue / toggle_cue to navigate or set them."""
+    try:
+        result = get_ableton_connection().send_command("get_cue_points")
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error getting cue points: {str(e)}")
+        return f"Error getting cue points: {str(e)}"
+
+@mcp.tool()
+def get_warp_markers(ctx: Context, track_index: int, clip_index: int, arrangement_clip_index: int = None) -> str:
+    """List warp markers on an audio clip (beat_time / sample_time).
+
+    Session slot, or an arrangement clip via arrangement_clip_index like add_notes_to_clip.
+    """
+    try:
+        params = {"track_index": track_index, "clip_index": clip_index}
+        if arrangement_clip_index is not None:
+            params["arrangement_clip_index"] = arrangement_clip_index
+        result = get_ableton_connection().send_command("get_warp_markers", params)
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error getting warp markers: {str(e)}")
+        return f"Error getting warp markers: {str(e)}"
+
+@mcp.tool()
+def move_device(ctx: Context, track_index: int, device_index: int, target_index: int) -> str:
+    """Reorder a device on a track (0 = leftmost).
+
+    After loading a MIDI effect (Chord, Scale, Arpeggiator via get_browser_items_at_path
+    'midi_effects' then load_instrument_or_effect), call this to place it before the instrument.
+    """
+    try:
+        result = get_ableton_connection().send_command("move_device", {
+            "track_index": track_index, "device_index": device_index, "target_index": target_index})
+        return f"Moved device {device_index} to {result.get('target_index', target_index)} on track {track_index}"
+    except Exception as e:
+        logger.error(f"Error moving device: {str(e)}")
+        return f"Error moving device: {str(e)}"
+
+@mcp.tool()
+def set_groove_amount(ctx: Context, amount: float) -> str:
+    """Set the song's global groove amount, typically 0.0-1.0. Clips still need a groove from apply_groove."""
+    try:
+        result = get_ableton_connection().send_command("set_groove_amount", {"amount": amount})
+        return f"Groove amount {result.get('amount', amount)}"
+    except Exception as e:
+        logger.error(f"Error setting groove amount: {str(e)}")
+        return f"Error setting groove amount: {str(e)}"
+
+@mcp.tool()
+def apply_groove(ctx: Context, track_index: int, clip_index: int, groove_index: int, arrangement_clip_index: int = None) -> str:
+    """Assign a Groove Pool groove to a clip. groove_index comes from get_groove_pool.
+
+    Session slot, or an arrangement clip via arrangement_clip_index like add_notes_to_clip.
+    """
+    try:
+        params = {"track_index": track_index, "clip_index": clip_index, "groove_index": groove_index}
+        if arrangement_clip_index is not None:
+            params["arrangement_clip_index"] = arrangement_clip_index
+        result = get_ableton_connection().send_command("apply_groove", params)
+        return f"Applied groove {result.get('groove_index', groove_index)} ({result.get('groove_name', '')})"
+    except Exception as e:
+        logger.error(f"Error applying groove: {str(e)}")
+        return f"Error applying groove: {str(e)}"
+
+@mcp.tool()
+def clear_clip_groove(ctx: Context, track_index: int, clip_index: int, arrangement_clip_index: int = None) -> str:
+    """Remove the assigned groove from a clip.
+
+    Session slot, or an arrangement clip via arrangement_clip_index like add_notes_to_clip.
+    """
+    try:
+        params = {"track_index": track_index, "clip_index": clip_index}
+        if arrangement_clip_index is not None:
+            params["arrangement_clip_index"] = arrangement_clip_index
+        get_ableton_connection().send_command("clear_clip_groove", params)
+        return f"Cleared groove on track {track_index}, clip {clip_index}"
+    except Exception as e:
+        logger.error(f"Error clearing clip groove: {str(e)}")
+        return f"Error clearing clip groove: {str(e)}"
+
+@mcp.tool()
+def set_device_sidechain(ctx: Context, track_index: int, device_index: int, routing_type_name: str, channel_name: str = None) -> str:
+    """Set the external sidechain source on a CompressorDevice (Compressor, Glue Compressor).
+
+    Use get_device_sidechain first for available routing_type_name / channel_name values
+    (e.g. a kick track). Other device classes have no sidechain API.
+    """
+    try:
+        params = {"track_index": track_index, "device_index": device_index,
+                  "routing_type_name": routing_type_name}
+        if channel_name is not None:
+            params["channel_name"] = channel_name
+        result = get_ableton_connection().send_command("set_device_sidechain", params)
+        return f"Sidechain '{routing_type_name}' / {result.get('channel_name', channel_name)}"
+    except Exception as e:
+        logger.error(f"Error setting device sidechain: {str(e)}")
+        return f"Error setting device sidechain: {str(e)}"
+
+@mcp.tool()
+def insert_rack_chain(ctx: Context, track_index: int, device_index: int, index: int = -1, name: str = None) -> str:
+    """Insert a chain into an Instrument/Audio/MIDI Rack. Live 12.3+ only (RackDevice.create_chain).
+
+    index -1 appends. Creating macro maps is GUI-only.
+    """
+    try:
+        params = {"track_index": track_index, "device_index": device_index, "index": index}
+        if name is not None:
+            params["name"] = name
+        result = get_ableton_connection().send_command("insert_rack_chain", params)
+        return f"Inserted chain {result.get('chain_index', index)} '{result.get('name', name or '')}'"
+    except Exception as e:
+        logger.error(f"Error inserting rack chain: {str(e)}")
+        return f"Error inserting rack chain: {str(e)}"
+
+@mcp.tool()
+def set_chain_mixer(ctx: Context, track_index: int, device_index: int, chain_index: int,
+                    mute: bool = None, solo: bool = None, volume: float = None, panning: float = None) -> str:
+    """Set mixer properties on a rack chain. Omit fields you do not want to change.
+
+    Parameters:
+    - mute, solo: chain mute/solo
+    - volume: 0.0-1.0
+    - panning: -1.0 (left) to 1.0 (right)
+    """
+    try:
+        params = {"track_index": track_index, "device_index": device_index, "chain_index": chain_index}
+        if mute is not None:
+            params["mute"] = mute
+        if solo is not None:
+            params["solo"] = solo
+        if volume is not None:
+            params["volume"] = volume
+        if panning is not None:
+            params["panning"] = panning
+        result = get_ableton_connection().send_command("set_chain_mixer", params)
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error setting chain mixer: {str(e)}")
+        return f"Error setting chain mixer: {str(e)}"
+
+@mcp.tool()
+def capture_and_insert_scene(ctx: Context) -> str:
+    """Capture currently playing session clips into a new scene (song.capture_and_insert_scene)."""
+    try:
+        result = get_ableton_connection().send_command("capture_and_insert_scene")
+        return f"Captured scene '{result.get('name', '')}' at index {result.get('scene_index', '')}"
+    except Exception as e:
+        logger.error(f"Error capturing and inserting scene: {str(e)}")
+        return f"Error capturing and inserting scene: {str(e)}"
+
+@mcp.tool()
+def crop_clip(ctx: Context, track_index: int, clip_index: int, arrangement_clip_index: int = None) -> str:
+    """Crop a clip to its loop start/end (clip.crop()).
+
+    Session slot, or an arrangement clip via arrangement_clip_index like add_notes_to_clip.
+    """
+    try:
+        params = {"track_index": track_index, "clip_index": clip_index}
+        if arrangement_clip_index is not None:
+            params["arrangement_clip_index"] = arrangement_clip_index
+        result = get_ableton_connection().send_command("crop_clip", params)
+        return f"Cropped clip; length {result.get('length', '')} beats"
+    except Exception as e:
+        logger.error(f"Error cropping clip: {str(e)}")
+        return f"Error cropping clip: {str(e)}"
+
+@mcp.tool()
+def set_clip_launch(ctx: Context, track_index: int, clip_index: int, launch_mode: int = None,
+                    launch_quantization: int = None, legato: bool = None, arrangement_clip_index: int = None) -> str:
+    """Set session-clip launch behavior. Omit fields you do not want to change.
+
+    Parameters:
+    - launch_mode: 0=Trigger, 1=Gate, 2=Toggle, 3=Repeat
+    - launch_quantization: Live enum (0 = none / follow global)
+    - legato: keep playhead position on retrigger
+    - arrangement_clip_index: optional arrangement clip, same as add_notes_to_clip
+    """
+    try:
+        params = {"track_index": track_index, "clip_index": clip_index}
+        if launch_mode is not None:
+            params["launch_mode"] = launch_mode
+        if launch_quantization is not None:
+            params["launch_quantization"] = launch_quantization
+        if legato is not None:
+            params["legato"] = legato
+        if arrangement_clip_index is not None:
+            params["arrangement_clip_index"] = arrangement_clip_index
+        result = get_ableton_connection().send_command("set_clip_launch", params)
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error setting clip launch: {str(e)}")
+        return f"Error setting clip launch: {str(e)}"
+
+@mcp.tool()
+def toggle_cue(ctx: Context) -> str:
+    """Set or delete a cue point at the current arrangement song time (song.set_or_delete_cue)."""
+    try:
+        result = get_ableton_connection().send_command("toggle_cue")
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error toggling cue: {str(e)}")
+        return f"Error toggling cue: {str(e)}"
+
+@mcp.tool()
+def jump_to_cue(ctx: Context, direction: str = None, index: int = None) -> str:
+    """Jump the playhead to a cue point.
+
+    Parameters:
+    - direction: 'next' or 'prev' (song.jump_to_next_cue / jump_to_prev_cue)
+    - index: jump to this cue from get_cue_points instead of next/prev
+    """
+    try:
+        params = {}
+        if direction is not None:
+            params["direction"] = direction
+        if index is not None:
+            params["index"] = index
+        result = get_ableton_connection().send_command("jump_to_cue", params)
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error jumping to cue: {str(e)}")
+        return f"Error jumping to cue: {str(e)}"
+
+@mcp.tool()
+def set_crossfader(ctx: Context, value: float) -> str:
+    """Set the master crossfader position, 0.0 (A) through 1.0 (B)."""
+    try:
+        result = get_ableton_connection().send_command("set_crossfader", {"value": value})
+        return f"Crossfader {result.get('value', value)}"
+    except Exception as e:
+        logger.error(f"Error setting crossfader: {str(e)}")
+        return f"Error setting crossfader: {str(e)}"
+
+@mcp.tool()
+def set_crossfade_assign(ctx: Context, track_index: int, assign: int) -> str:
+    """Assign a track to the crossfader: 0=A, 1=none, 2=B."""
+    try:
+        result = get_ableton_connection().send_command("set_crossfade_assign", {
+            "track_index": track_index, "assign": assign})
+        labels = {0: "A", 1: "none", 2: "B"}
+        return f"Track {track_index} crossfade {labels.get(result.get('assign', assign), assign)}"
+    except Exception as e:
+        logger.error(f"Error setting crossfade assign: {str(e)}")
+        return f"Error setting crossfade assign: {str(e)}"
+
+@mcp.tool()
+def show_view(ctx: Context, view_name: str) -> str:
+    """Show an Ableton view by name (app.view.show_view).
+
+    Common names: 'Session', 'Arranger', 'Browser', 'Detail/Clip', 'Detail/DeviceChain'.
+    """
+    try:
+        get_ableton_connection().send_command("show_view", {"view_name": view_name})
+        return f"Showed view '{view_name}'"
+    except Exception as e:
+        logger.error(f"Error showing view: {str(e)}")
+        return f"Error showing view: {str(e)}"
+
+@mcp.tool()
+def add_warp_marker(ctx: Context, track_index: int, clip_index: int, beat_time: float,
+                    sample_time: float = None, arrangement_clip_index: int = None) -> str:
+    """Add a warp marker on an audio clip at beat_time (beats).
+
+    sample_time is optional seconds into the sample; omit to keep the current warp mapping
+    at that beat. Session slot, or an arrangement clip via arrangement_clip_index like add_notes_to_clip.
+    """
+    try:
+        params = {"track_index": track_index, "clip_index": clip_index, "beat_time": beat_time}
+        if sample_time is not None:
+            params["sample_time"] = sample_time
+        if arrangement_clip_index is not None:
+            params["arrangement_clip_index"] = arrangement_clip_index
+        result = get_ableton_connection().send_command("add_warp_marker", params)
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error adding warp marker: {str(e)}")
+        return f"Error adding warp marker: {str(e)}"
 
 
 def main():
