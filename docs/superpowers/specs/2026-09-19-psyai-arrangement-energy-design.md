@@ -60,6 +60,8 @@ Use the existing MIDI FX Rack and project synth FX first, supplemented by indexe
 
 Saturn 2 is available at query:Plugins#VST3:FabFilter:Saturn%202.
 
+- Use the existing empty `Serum Glitchy Distorted Melody` track, which already contains Serum 2 followed by Saturn 2, as the primary processed melodic-FX voice.
+- Leave `Serum Laser` unchanged because its sound does not suit this arrangement.
 - Use Saturn 2 selectively on dedicated glide or FX layers, not on the master and not as permanent full-band processing on the main bass.
 - Intended uses are short driven, filtered, or modulated sound-design moments that increase contrast.
 - Keep sub frequencies comparatively clean; distortion should emphasize midrange texture and movement.
