@@ -14,6 +14,19 @@ if str(MAX_DIR) not in sys.path:
 import build_amxd  # noqa: E402
 
 
+SPLIT_JS_FILES = [
+    "lom-core.js",
+    "lom-read.js",
+    "lom-session.js",
+    "lom-clips.js",
+    "lom-devices.js",
+    "lom-routing.js",
+    "lom-mixer.js",
+    "lom-detail.js",
+    "lom-live12.js",
+]
+
+
 class UserLibraryPathTests(unittest.TestCase):
     def test_macos_default(self):
         home = Path("/Users/demo")
@@ -53,8 +66,9 @@ class InstallDeviceTests(unittest.TestCase):
         src = root / "MaxForLive"
         (src / "code").mkdir(parents=True)
         (src / "AbletonMCP.amxd").write_bytes(b"amxd")
-        (src / "code" / "tcp-server.js").write_text("tcp", encoding="utf-8")
-        (src / "code" / "lom-handler.js").write_text("lom", encoding="utf-8")
+        js_files = ["tcp-server.js", "lom-handler.js"] + SPLIT_JS_FILES
+        for name in js_files:
+            (src / "code" / name).write_text(name, encoding="utf-8")
         return src
 
     def test_copies_amxd_and_js_files_flat(self):
@@ -64,10 +78,11 @@ class InstallDeviceTests(unittest.TestCase):
             dest = root / "dest"
             copied = build_amxd.install_device(src, dest)
             names = sorted(path.name for path in copied)
-            self.assertEqual(names, ["AbletonMCP.amxd", "lom-handler.js", "tcp-server.js"])
+            expected = sorted(["AbletonMCP.amxd", "tcp-server.js", "lom-handler.js"] + SPLIT_JS_FILES)
+            self.assertEqual(names, expected)
             self.assertEqual((dest / "AbletonMCP.amxd").read_bytes(), b"amxd")
-            self.assertEqual((dest / "tcp-server.js").read_text(encoding="utf-8"), "tcp")
-            self.assertEqual((dest / "lom-handler.js").read_text(encoding="utf-8"), "lom")
+            for name in ["tcp-server.js", "lom-handler.js"] + SPLIT_JS_FILES:
+                self.assertEqual((dest / name).read_text(encoding="utf-8"), name)
             self.assertFalse((dest / "code").exists())
 
     def test_removes_leftover_code_subfolder(self):
@@ -99,6 +114,27 @@ class InstallDeviceTests(unittest.TestCase):
             (src / "code" / "tcp-server.js").write_text("tcp", encoding="utf-8")
             with self.assertRaises(FileNotFoundError):
                 build_amxd.install_device(src, Path(tmp) / "dest")
+
+
+class DependencyCacheTests(unittest.TestCase):
+    def test_lists_all_repository_js_files_deterministically(self):
+        code_dir = MAX_DIR / "code"
+        expected = sorted(path.name for path in code_dir.glob("*.js"))
+        cache = build_amxd.patcher["patcher"]["dependency_cache"]
+        self.assertEqual([entry["name"] for entry in cache], expected)
+        self.assertEqual([entry["bootpath"] for entry in cache], ["."] * len(expected))
+
+    def test_ignores_nested_files_and_sorts_cache(self):
+        with TemporaryDirectory() as tmp:
+            code_dir = Path(tmp) / "code"
+            code_dir.mkdir()
+            for name in ("z.js", "a.js", "m.js"):
+                (code_dir / name).write_text(name, encoding="utf-8")
+            (code_dir / "nested").mkdir()
+            (code_dir / "nested" / "ignored.js").write_text("ignored", encoding="utf-8")
+
+            cache = build_amxd.javascript_dependency_cache(code_dir)
+            self.assertEqual([entry["name"] for entry in cache], ["a.js", "m.js", "z.js"])
 
 
 if __name__ == "__main__":

@@ -4,13 +4,33 @@ Everything learned from developing and extending this Ableton Live MCP integrati
 
 ## Architecture Overview
 
-The system has three components:
+The system has three runtime components:
 
-1. **MCP Server** (MCP_Server/server.py) — A FastMCP Python server that any MCP-capable agent communicates with.
+1. **MCP Server** — `MCP_Server/server.py` is the tiny executable/importable entrypoint. `connection.py` owns TCP connection policy; `runtime.py` owns logging, lifespan management, and the shared FastMCP instance; `tools/*.py` contains the decorated tools grouped by command domain, and `tools/__init__.py` registers those modules once.
 
-2. **Remote Script** (`AbletonMCP_Remote_Script/__init__.py`) — A Python `ControlSurface` script that runs inside Ableton Live. It listens on TCP port **9877** for JSON commands from the MCP server. It has direct access to the Ableton Live Object Model (LOM) — tracks, clips, devices, parameters, etc.
+2. **Remote Script** — `AbletonMCP_Remote_Script/__init__.py` is the tiny Live entrypoint. `control_surface.py` owns the `ControlSurface` class, socket handling, and command dispatch. `support.py` contains shared constants and compatibility helpers, while `mixins/*.py` contains the LOM implementations grouped by command domain. It listens on TCP port **9877** inside Ableton Live.
 
-3. **Hybrid Server** (`Ableton-MCP_hybrid-server/AbletonMCP_UDP/__init__.py`) — An alternative Remote Script that also supports UDP on port 9878 for low-latency parameter control. Useful as a reference implementation.
+3. **Max for Live device** — `MaxForLive/code/lom-handler.js` is the bootstrap and dispatch module. The flat `lom-*.js` files are top-level `include()` modules loaded into its shared Max JS scope. `MaxForLive/build_amxd.py` discovers every top-level `code/*.js`, bundles them into the dependency cache, and installs the `.amxd` plus all JavaScript files flat beside it.
+
+The hybrid server (`Ableton-MCP_hybrid-server/AbletonMCP_UDP/__init__.py`) remains an alternative UDP Remote Script and reference implementation.
+
+### Python module layout
+
+Keep the package boundaries visible when navigating or extending the code:
+
+```
+AbletonMCP_Remote_Script/
+├── __init__.py          # Live entrypoint
+├── control_surface.py   # ControlSurface, socket, dispatch
+├── support.py           # shared constants and compatibility
+└── mixins/*.py          # command domains
+
+MCP_Server/
+├── server.py            # executable/importable entrypoint
+├── connection.py        # TCP policy
+├── runtime.py           # logger, lifespan, shared mcp
+└── tools/*.py           # decorated command-domain tools
+```
 
 ### Communication Flow
 
@@ -40,7 +60,8 @@ MCP Server (unchanged) → TCP:9878 → node.script (Node.js TCP + JSON) → Max
 
 Two JS runtimes inside the device:
 - **`node.script`** runs `tcp-server.js` (Node.js) — TCP server, JSON parsing, request routing
-- **`js`** runs `lom-handler.js` (Max JS, ES5 only) — all LiveAPI/LOM commands
+- **`js`** runs `lom-handler.js` (Max JS, ES5 only) — bootstrap, queue, and dispatch
+- **`lom-*.js`** files are included as top-level modules, so they share the handler's Max JS global scope
 
 They communicate via Max messages passing JSON strings (not dicts — see quirks below).
 
@@ -61,7 +82,13 @@ They communicate via Max messages passing JSON strings (not dicts — see quirks
 
 ### Updating Code
 
-`lom-handler.js` sets `autowatch = 1`, so the `js` object reloads it whenever the copy in the User Library changes on disk — no restart needed for LOM handler changes. Note the queue and any in-flight `record_arrangement` are reset on reload.
+After changing any `lom-*.js`, rebuild and install the device, then reload or reinstantiate it in Ableton before relying on the change:
+
+```bash
+python MaxForLive/build_amxd.py --install
+```
+
+Max included-module runtime watching is environment-dependent. Only skip the rebuild/install and reload/reinstantiate steps after runtime watching has been verified in the current setup. A reload resets the queue and any in-flight `record_arrangement`.
 
 `node.script` caches `tcp-server.js` aggressively. After changing it:
 1. Re-run `python MaxForLive/build_amxd.py --install`
@@ -136,7 +163,7 @@ macOS:
 /Applications/Ableton Live 12 Suite.app/Contents/App-Resources/MIDI Remote Scripts/AbletonMCP/
 ```
 
-The directory contains `__init__.py` (the script) and a `__pycache__/` directory (compiled bytecode). User Library `Remote Scripts/AbletonMCP` is a second copy on some Windows machines.
+The directory contains the tiny `__init__.py` entrypoint and the imported Remote Script modules (`control_surface.py`, `support.py`, `plugin_params.py`, and `mixins/`), plus a `__pycache__/` directory (compiled bytecode). User Library `Remote Scripts/AbletonMCP` is a second copy on some Windows machines.
 
 ### Updating the Script
 
@@ -149,17 +176,36 @@ python tools/launch_ableton.py --reload
 
 `launch_ableton.py` without `--reload` starts Live only if it is not already running (no second instance). Toggling the Control Surface in Preferences does NOT reliably reload the script; a full quit and relaunch is required.
 
-Manual fallback (macOS app bundles can silently no-op a bare `cp`; always `rm` first):
+Manual fallback (macOS app bundles can silently no-op a bare `cp`; copy every Python module and preserve package paths):
 
 ```bash
-rm "/Applications/Ableton Live 12 Suite.app/Contents/App-Resources/MIDI Remote Scripts/AbletonMCP/__init__.py"
-cp AbletonMCP_Remote_Script/__init__.py "/Applications/Ableton Live 12 Suite.app/Contents/App-Resources/MIDI Remote Scripts/AbletonMCP/__init__.py"
-rm -rf "/Applications/Ableton Live 12 Suite.app/Contents/App-Resources/MIDI Remote Scripts/AbletonMCP/__pycache__"
+SOURCE="AbletonMCP_Remote_Script"
+DEST="/Applications/Ableton Live 12 Suite.app/Contents/App-Resources/MIDI Remote Scripts/AbletonMCP"
+mkdir -p "$DEST"
+(
+  cd "$SOURCE"
+  find . -type f -name '*.py' ! -path '*/__pycache__/*' -print0 |
+    while IFS= read -r -d '' file; do
+      target="$DEST/${file#./}"
+      mkdir -p "$(dirname "$target")"
+      rm -f "$target"
+      cp "$file" "$target"
+    done
+)
+find "$DEST" -type d -name __pycache__ -prune -exec rm -rf {} +
 ```
 
 Restart the MCP server after Ableton is back up and the Control Surface is active.
 
 ## Adding New Commands
+
+Add each new command to the matching domain module on every backend:
+
+- Remote Script LOM behavior belongs in the appropriate `AbletonMCP_Remote_Script/mixins/*.py` module. Keep socket policy and central dispatch in `control_surface.py`.
+- MCP-facing decorated tools belong in the matching `MCP_Server/tools/*.py` module. `MCP_Server/tools/__init__.py` should continue to register each tool module once; `server.py` remains only the executable/importable entrypoint.
+- Max for Live behavior belongs in the matching flat `MaxForLive/code/lom-*.js` module, with `lom-handler.js` limited to bootstrap/queue/dispatch concerns. Rebuild with `MaxForLive/build_amxd.py` so all top-level `code/*.js` files are bundled and installed flat.
+
+The public-surface expectations in `tests/test_command_surfaces.py` cover the MCP tools, Remote Script commands, and Max commands. Update the Remote Script and Max expectations only when the public command surface intentionally changes; module moves alone do not require a surface update. `tests/test_source_layout.py` keeps every production source file at or below the 1,000-line ceiling.
 
 ### High-impact LOM batch contract
 
@@ -194,26 +240,12 @@ Ableton's Live Object Model is NOT thread-safe. The Remote Script handles this w
 
 ### Step-by-Step: Adding a New Command
 
-#### 1. Remote Script (`AbletonMCP_Remote_Script/__init__.py`)
+#### 1. Remote Script (`AbletonMCP_Remote_Script/`)
 
-**For a read-only command**, add handling in the socket thread's command dispatch (around where `get_session_info` is handled):
+Choose the matching mixin, implement the LOM method there, and add only the necessary central routing or scheduling entry in `control_surface.py`:
+
 ```python
-elif command == "your_new_command":
-    result = self._your_new_method(params.get("param1"), params.get("param2"))
-```
-
-**For a state-modifying command**, add it to the list of modifying commands and add routing in `main_thread_task`:
-```python
-# In the modifying commands list:
-if command in ["create_clip", "add_notes_to_clip", ..., "your_new_command"]:
-
-# In main_thread_task routing:
-elif command == "your_new_command":
-    result = self._your_new_method(params.get("param1"), params.get("param2"))
-```
-
-Then implement the method:
-```python
+# In the matching mixins/*.py module:
 def _your_new_method(self, param1, param2):
     try:
         # Access Ableton objects via self._song
@@ -225,9 +257,9 @@ def _your_new_method(self, param1, param2):
         raise
 ```
 
-#### 2. MCP Server (`MCP_Server/server.py`)
+#### 2. MCP Server (`MCP_Server/tools/`)
 
-Add a new `@mcp.tool()` function:
+Add the decorated tool to the matching domain module, using the shared runtime and connection helpers:
 ```python
 @mcp.tool()
 def your_new_command(ctx: Context, param1: int, param2: str) -> str:
@@ -244,7 +276,7 @@ def your_new_command(ctx: Context, param1: int, param2: str) -> str:
         return f"Error: {str(e)}"
 ```
 
-If it's a modifying command, add it to the `is_modifying_command` list in the server as well.
+Do not add ordinary tool implementations to `server.py`; keep the executable/importable entrypoint small. If it is a modifying command, preserve the existing modifying-command classification in the appropriate tool/runtime path.
 
 ## Mixing — Track Volume & Panning
 

@@ -16,6 +16,24 @@ DEVICE_TYPE_AUDIO_EFFECT = 0x61616161  # 'aaaa'
 PORT = 9878
 DEVICE_PRESET_RELATIVE = Path("Presets") / "Audio Effects" / "Max Audio Effect" / "AbletonMCP"
 
+
+def javascript_files(code_dir=None):
+    """Return top-level Max JS files in deterministic filename order."""
+    code_dir = Path(code_dir) if code_dir is not None else Path(__file__).resolve().parent / "code"
+    if not code_dir.is_dir():
+        return []
+    return sorted(
+        (path for path in code_dir.glob("*.js") if path.is_file()),
+        key=lambda path: path.name,
+    )
+
+
+def javascript_dependency_cache(code_dir=None):
+    return [
+        {"name": path.name, "bootpath": ".", "type": "TEXT", "implicit": 1}
+        for path in javascript_files(code_dir)
+    ]
+
 patcher = {
     "patcher": {
         "fileversion": 1,
@@ -173,10 +191,7 @@ patcher = {
             "sortmode": 0,
             "viewmode": 0
         },
-        "dependency_cache": [
-            {"name": "tcp-server.js", "bootpath": ".", "type": "TEXT", "implicit": 1},
-            {"name": "lom-handler.js", "bootpath": ".", "type": "TEXT", "implicit": 1}
-        ]
+        "dependency_cache": javascript_dependency_cache()
     }
 }
 
@@ -236,7 +251,7 @@ def install_device(source_dir, dest_dir):
     if not amxd.is_file():
         raise FileNotFoundError(f"Built device not found: {amxd}")
     js_dir = source_dir / "code"
-    js_files = sorted(js_dir.glob("*.js")) if js_dir.is_dir() else []
+    js_files = javascript_files(js_dir)
     dest_dir.mkdir(parents=True, exist_ok=True)
     leftover = dest_dir / "code"
     if leftover.is_dir():

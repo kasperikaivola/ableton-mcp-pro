@@ -125,18 +125,59 @@ class DeployTests(unittest.TestCase):
             with self.assertRaises(FileNotFoundError):
                 inst.deploy_file(Path(tmp) / "missing.py", Path(tmp) / "dest" / "__init__.py")
 
-    def test_deploy_copies_plugin_params_sibling(self):
+    def test_deploy_copies_complete_python_package_and_skips_caches(self):
         with TemporaryDirectory() as tmp:
             root = Path(tmp)
             src_dir = root / "AbletonMCP_Remote_Script"
             src_dir.mkdir()
-            (src_dir / "__init__.py").write_text("print('script')\n", encoding="utf-8")
-            (src_dir / "plugin_params.py").write_text("X = 1\n", encoding="utf-8")
+            files = {
+                "__init__.py": "print('script')\n",
+                "control_surface.py": "CONTROL = True\n",
+                "support.py": "SUPPORT = True\n",
+                "plugin_params.py": "X = 1\n",
+                "mixins/__init__.py": "MIXINS = True\n",
+                "mixins/clip_commands.py": "CLIPS = True\n",
+            }
+            for relative, contents in files.items():
+                path = src_dir / relative
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(contents, encoding="utf-8")
+            (src_dir / "README.txt").write_text("do not deploy\n", encoding="utf-8")
+            cache = src_dir / "mixins" / "__pycache__"
+            cache.mkdir()
+            (cache / "stale.pyc").write_bytes(b"stale bytecode")
+            (cache / "not_a_module.py").write_text("do not deploy\n", encoding="utf-8")
+            (src_dir / "ignored.pyc").write_bytes(b"stale bytecode")
             dest = root / "MIDI Remote Scripts" / "AbletonMCP" / "__init__.py"
+            (dest.parent / "__pycache__").mkdir(parents=True)
+            (dest.parent / "__pycache__" / "stale.pyc").write_bytes(b"old bytecode")
+            (dest.parent / "mixins" / "__pycache__").mkdir(parents=True)
+            (dest.parent / "mixins" / "__pycache__" / "stale.pyc").write_bytes(b"old bytecode")
             copied = inst.deploy(source=src_dir / "__init__.py", destinations=[dest])
-            self.assertEqual(dest.read_text(encoding="utf-8"), "print('script')\n")
-            self.assertEqual((dest.parent / "plugin_params.py").read_text(encoding="utf-8"), "X = 1\n")
-            self.assertEqual(len(copied), 2)
+            copied_paths = {Path(item["dest"]).relative_to(dest.parent) for item in copied}
+            self.assertEqual(copied_paths, {Path(relative) for relative in files})
+            for relative, contents in files.items():
+                deployed = dest.parent / relative
+                self.assertEqual(deployed.read_text(encoding="utf-8"), contents)
+                stat = next(item for item in copied if Path(item["dest"]).relative_to(dest.parent) == Path(relative))
+                self.assertEqual(stat["bytes"], len((src_dir / relative).read_bytes()))
+                self.assertEqual(stat["lines"], 1)
+            self.assertFalse((dest.parent / "README.txt").exists())
+            self.assertFalse((dest.parent / "ignored.pyc").exists())
+            self.assertFalse((dest.parent / "mixins" / "__pycache__").exists())
+            self.assertFalse((dest.parent / "__pycache__").exists())
+            self.assertTrue(all(item["bytes"] > 0 for item in copied))
+
+    def test_deploy_minimal_source_folder_only_init(self):
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "custom" / "__init__.py"
+            source.parent.mkdir()
+            source.write_bytes(b"CUSTOM = True\n")
+            dest = root / "AbletonMCP" / "__init__.py"
+            copied = inst.deploy(source=source, destinations=[dest])
+            self.assertEqual([Path(item["dest"]).relative_to(dest.parent) for item in copied], [Path("__init__.py")])
+            self.assertEqual(dest.read_bytes(), source.read_bytes())
 
 
 class RemoteScriptPingTests(unittest.TestCase):

@@ -83,10 +83,22 @@ cd ableton-mcp-pro
 
 Copy the Remote Script into Ableton's MIDI Remote Scripts folder:
 
-**Mac:**
+**Mac (manual full-package copy):**
 ```bash
-mkdir -p "/Applications/Ableton Live 12 Suite.app/Contents/App-Resources/MIDI Remote Scripts/AbletonMCP"
-cp AbletonMCP_Remote_Script/__init__.py "/Applications/Ableton Live 12 Suite.app/Contents/App-Resources/MIDI Remote Scripts/AbletonMCP/__init__.py"
+SOURCE="AbletonMCP_Remote_Script"
+DEST="/Applications/Ableton Live 12 Suite.app/Contents/App-Resources/MIDI Remote Scripts/AbletonMCP"
+mkdir -p "$DEST"
+(
+  cd "$SOURCE"
+  find . -type f -name '*.py' ! -path '*/__pycache__/*' -print0 |
+    while IFS= read -r -d '' file; do
+      target="$DEST/${file#./}"
+      mkdir -p "$(dirname "$target")"
+      rm -f "$target"
+      cp "$file" "$target"
+    done
+)
+find "$DEST" -type d -name __pycache__ -prune -exec rm -rf {} +
 ```
 
 **Windows / macOS (script):**
@@ -95,12 +107,21 @@ python tools/deploy_remote_script.py
 python tools/launch_ableton.py
 ```
 
-`deploy_remote_script.py` copies into Live's MIDI Remote Scripts folder (and User Library `Remote Scripts/AbletonMCP` when present). `launch_ableton.py` starts Live only if it is not already running. After a Remote Script change, quit Live or pass `--reload` so the new script loads.
+`deploy_remote_script.py` copies the complete Python package, preserving nested paths and excluding non-Python files and bytecode caches, into Live's MIDI Remote Scripts folder (and User Library `Remote Scripts/AbletonMCP` when present). `launch_ableton.py` starts Live only if it is not already running. After a Remote Script change, quit Live or pass `--reload` so the new script loads.
 
-**Windows (manual):**
-```
-Copy AbletonMCP_Remote_Script\__init__.py to:
-C:\ProgramData\Ableton\Live 12 Suite\Resources\MIDI Remote Scripts\AbletonMCP\__init__.py
+**Windows (manual full-package copy):**
+```powershell
+$source = (Resolve-Path "AbletonMCP_Remote_Script").Path
+$destination = "C:\ProgramData\Ableton\Live 12 Suite\Resources\MIDI Remote Scripts\AbletonMCP"
+Get-ChildItem $source -Recurse -File -Filter *.py |
+  Where-Object { $_.FullName -notmatch '[\\/]__pycache__[\\/]' } |
+  ForEach-Object {
+    $relative = $_.FullName.Substring($source.Length).TrimStart([char[]]@('\\', '/'))
+    $target = Join-Path $destination $relative
+    New-Item -ItemType Directory -Force -Path (Split-Path $target) | Out-Null
+    Copy-Item $_.FullName $target -Force
+  }
+Get-ChildItem $destination -Recurse -Directory -Filter __pycache__ | Remove-Item -Recurse -Force
 ```
 
 > Adjust the path for your Ableton version (Live 11, Live 12, Suite vs Standard, etc).
@@ -236,14 +257,14 @@ Both views are useful — pick based on what you're doing:
 
 ## Updating the Remote Script
 
-When you modify `AbletonMCP_Remote_Script/__init__.py`:
+When you modify any file in `AbletonMCP_Remote_Script/`, deploy the entrypoint together with its imported modules (`control_surface.py`, `support.py`, `plugin_params.py`, and `mixins/`):
 
 ```bash
-cp AbletonMCP_Remote_Script/__init__.py "/Applications/Ableton Live 12 Suite.app/Contents/App-Resources/MIDI Remote Scripts/AbletonMCP/__init__.py"
-rm -rf "/Applications/Ableton Live 12 Suite.app/Contents/App-Resources/MIDI Remote Scripts/AbletonMCP/__pycache__"
+python tools/deploy_remote_script.py
+python tools/launch_ableton.py --reload
 ```
 
-Then **fully restart Ableton** (toggling the Control Surface in preferences doesn't reliably reload the script).
+The source package is intentionally split into a tiny `__init__.py` entrypoint, `control_surface.py`, shared `support.py`, and command-domain mixins. See [DEVELOPMENT.md](DEVELOPMENT.md) for the full module layout and command workflow.
 
 ## AI Melody Generation
 
@@ -278,7 +299,7 @@ to generate melody continuations. The agent reads a clip with
 
 ## Development
 
-See [DEVELOPMENT.md](DEVELOPMENT.md) for the full development guide — threading model, adding new commands, device parameters, automation, and recording architecture.
+See [DEVELOPMENT.md](DEVELOPMENT.md) for the module layout, threading model, adding new commands, device parameters, automation, and recording architecture.
 
 ## License
 

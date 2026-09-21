@@ -157,7 +157,7 @@ python tools/deploy_remote_script.py
 python tools/launch_ableton.py
 ```
 
-`deploy_remote_script.py` copies `AbletonMCP_Remote_Script/__init__.py` into each discovered Live MIDI Remote Scripts `AbletonMCP` folder (ProgramData Live 12/11 on Windows, `/Applications/Ableton Live *.app` on macOS, plus User Library `Remote Scripts/AbletonMCP` when that folder exists). It deletes the destination first and removes `__pycache__`.
+`deploy_remote_script.py` copies every `.py` file under the selected `AbletonMCP_Remote_Script/__init__.py`, preserving nested package paths, into each discovered Live MIDI Remote Scripts `AbletonMCP` folder (ProgramData Live 12/11 on Windows, `/Applications/Ableton Live *.app` on macOS, plus User Library `Remote Scripts/AbletonMCP` when that folder exists). Non-Python files and bytecode are excluded; each copied file is verified byte-for-byte and its destination `__pycache__` is removed. Use `--source PATH_TO_PACKAGE/__init__.py` for a custom package root and repeat `--dest PATH_TO_PACKAGE/__init__.py` for explicit destinations.
 
 `launch_ableton.py` starts Ableton Live only if a Live DAW process is not already running (it ignores Ableton Index / AbletonAudioCpl). After a Remote Script deploy, the still-running Live process keeps the old script; `python tools/launch_ableton.py --reload` quits and relaunches, then waits until `get_session_info` answers (an open TCP port is not enough). A forced quit can show Live's crash-recovery dialog; dismiss it or AbletonMCP will not bind port 9877.
 

@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-"""Copy AbletonMCP_Remote_Script/__init__.py (and plugin_params.py) into Live's MIDI Remote Scripts folder.
+"""Copy the complete AbletonMCP_Remote_Script Python package into Live.
 
-Deletes the destination file first, then copies, then removes __pycache__ so Live
-cannot keep a stale bytecode copy. Discovers Live 12/11 Suite (and User Library
-Remote Scripts when that folder already exists).
+The selected ``__init__.py`` determines the source package root. Every Python
+module below that root is copied with its relative path; non-Python files and
+bytecode caches are ignored. Each file is verified after copying, and the
+destination cache for each copied directory is cleared. The command discovers
+Live 12/11 Suite (and User Library Remote Scripts when that folder exists).
 
     python tools/deploy_remote_script.py
 
@@ -31,7 +33,7 @@ def parse_args(argv=None):
     parser.add_argument(
         "--source",
         type=Path,
-        help="Source __init__.py (default: repo AbletonMCP_Remote_Script/__init__.py)",
+        help="Package __init__.py (default: repo AbletonMCP_Remote_Script/__init__.py); all nested .py files deploy",
     )
     parser.add_argument(
         "--dest",

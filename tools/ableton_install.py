@@ -1,4 +1,4 @@
-"""Locate Ableton Live installs, deploy the Remote Script, and detect a running Live."""
+"""Locate Ableton Live installs, deploy the full Remote Script package, and detect Live."""
 
 from __future__ import annotations
 
@@ -302,7 +302,7 @@ def _clear_pycache(dest_py: Path) -> None:
 
 
 def deploy_file(source: Path, dest: Path) -> dict:
-    """Copy source over dest: delete first, write, drop __pycache__. Returns copy stats."""
+    """Copy one Python file, verify its bytes, clear its destination cache, and return stats."""
     source = Path(source)
     dest = Path(dest)
     if not source.is_file():
@@ -323,28 +323,37 @@ def deploy_file(source: Path, dest: Path) -> dict:
     }
 
 
-def extra_remote_script_files(source: Path) -> list[Path]:
-    """Sibling modules that must sit next to __init__.py in Live's AbletonMCP folder."""
-    sibling = Path(source).parent / "plugin_params.py"
-    if sibling.is_file():
-        return [sibling]
-    return []
-
-
 def deploy(source: Path | None = None, destinations: list[Path] | None = None, *, system: str | None = None, env: dict | None = None) -> list[dict]:
+    """Deploy every Python file under the selected ``__init__.py`` package root.
+
+    Relative package paths are preserved below each destination ``__init__.py``.
+    Only ``.py`` files are copied; caches, bytecode, and other source files are
+    ignored. Each copied file is verified byte-for-byte by ``deploy_file``.
+    """
     source = Path(source) if source is not None else remote_script_source()
+    if not source.is_file():
+        raise FileNotFoundError("Remote Script source not found: {0}".format(source))
     dests = destinations if destinations is not None else default_destinations(system=system, env=env)
     if not dests:
         raise FileNotFoundError(
             "No Ableton MIDI Remote Scripts folder found. Set ABLETON_LIVE_ROOT or "
             "ABLETON_MIDI_REMOTE_SCRIPTS, or install Live."
         )
-    copied = []
-    extras = extra_remote_script_files(source)
+    package_root = source.parent
+    package_files = sorted(
+        (
+            path
+            for path in package_root.rglob("*.py")
+            if path.is_file() and "__pycache__" not in path.parts
+        ),
+        key=lambda path: path.relative_to(package_root).as_posix(),
+    )
+    copied: list[dict] = []
     for dest in dests:
-        copied.append(deploy_file(source, dest))
-        for extra in extras:
-            copied.append(deploy_file(extra, dest.parent / extra.name))
+        destination_root = Path(dest).parent
+        for package_file in package_files:
+            relative = package_file.relative_to(package_root)
+            copied.append(deploy_file(package_file, destination_root / relative))
     return copied
 
 
