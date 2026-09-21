@@ -150,6 +150,19 @@ fluidclaude commands. Add an audio track "sc in" (Ext. In 1/2, Monitor In) yours
 engine plays into Live through BlackHole. Never leave `you` on All Ins: that includes the bus
 fluidclaude plays on and every loop becomes a "call".
 
+## deploy_remote_script.py / launch_ableton.py — install and open Live
+
+```bash
+python tools/deploy_remote_script.py
+python tools/launch_ableton.py
+```
+
+`deploy_remote_script.py` copies `AbletonMCP_Remote_Script/__init__.py` into each discovered Live MIDI Remote Scripts `AbletonMCP` folder (ProgramData Live 12/11 on Windows, `/Applications/Ableton Live *.app` on macOS, plus User Library `Remote Scripts/AbletonMCP` when that folder exists). It deletes the destination first and removes `__pycache__`.
+
+`launch_ableton.py` starts Ableton Live only if a Live DAW process is not already running (it ignores Ableton Index / AbletonAudioCpl). After a Remote Script deploy, the still-running Live process keeps the old script; `python tools/launch_ableton.py --reload` quits and relaunches, then waits until `get_session_info` answers (an open TCP port is not enough). A forced quit can show Live's crash-recovery dialog; dismiss it or AbletonMCP will not bind port 9877.
+
+Env overrides: `ABLETON_LIVE_ROOT`, `ABLETON_MIDI_REMOTE_SCRIPTS`, `ABLETON_LIVE_EXE`, `ABLETON_USER_LIBRARY`.
+
 ## live_client.py — talk to the Remote Script from a script
 
 `live(cmd, params)` sends one command over the port-9877 socket and returns its result, plus

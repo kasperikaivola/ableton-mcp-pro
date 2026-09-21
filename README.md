@@ -24,7 +24,10 @@ This fork adds significant capabilities beyond the original:
 - **Scene management** — Create, delete, rename, and fire scenes for arrangement workflows
 - **Track management** — Create/delete/duplicate MIDI and audio tracks
 - **Clip operations** — Duplicate, delete, rename, loop control, get/set notes
-- **Device control** — Get/set any device parameter, batch updates, delete devices
+- **LOM batch operations** — Patch MIDI notes in place by `note_id`, duplicate session clips into the arrangement with envelopes, and inspect application/dialog state
+- **Rack and native devices** — Rack macro values and variations, plus native Live device insertion by UI name on Live 12.3+
+- **Simpler sample control** — Read/set sample windows in integer sample frames; replace samples on Live 12.4+
+- **Device control** — Get/set any device parameter (including configured VST knobs by name, with inferred groups for Serum-style prefixes), batch updates, delete devices
 - **Browser integration** — Browse and load instruments, effects, and presets by URI
 - **Transport controls** — Tempo, time signature, metronome, record mode
 - **Undo/redo** support
@@ -86,7 +89,15 @@ mkdir -p "/Applications/Ableton Live 12 Suite.app/Contents/App-Resources/MIDI Re
 cp AbletonMCP_Remote_Script/__init__.py "/Applications/Ableton Live 12 Suite.app/Contents/App-Resources/MIDI Remote Scripts/AbletonMCP/__init__.py"
 ```
 
-**Windows:**
+**Windows / macOS (script):**
+```bash
+python tools/deploy_remote_script.py
+python tools/launch_ableton.py
+```
+
+`deploy_remote_script.py` copies into Live's MIDI Remote Scripts folder (and User Library `Remote Scripts/AbletonMCP` when present). `launch_ableton.py` starts Live only if it is not already running. After a Remote Script change, quit Live or pass `--reload` so the new script loads.
+
+**Windows (manual):**
 ```
 Copy AbletonMCP_Remote_Script\__init__.py to:
 C:\ProgramData\Ableton\Live 12 Suite\Resources\MIDI Remote Scripts\AbletonMCP\__init__.py
@@ -191,10 +202,10 @@ AI Assistant --> MCP Server (Python) --> TCP socket (port 9877) --> Remote Scrip
 ## Available Tools
 
 ### Read
-`get_session_info`, `get_track_info`, `get_device_parameters`, `get_arrangement_info`, `get_arrangement_clips`, `get_full_arrangement`, `get_clip_notes`, `get_arrangement_clip_notes`, `get_clip_envelope`, `get_browser_tree`, `get_browser_items_at_path`, `get_drum_pads`, `get_clip_info`, `get_groove_pool`, `get_device_sidechain`, `get_rack_chains`, `get_rack_macros`, `get_cue_points`, `get_warp_markers`
+`get_session_info`, `get_application_info`, `get_track_info`, `get_device_parameters`, `get_arrangement_info`, `get_arrangement_clips`, `get_full_arrangement`, `get_clip_notes`, `get_arrangement_clip_notes`, `get_clip_envelope`, `get_simpler_sample`, `get_browser_tree`, `get_browser_items_at_path`, `get_drum_pads`, `get_clip_info`, `get_groove_pool`, `get_device_sidechain`, `get_rack_chains`, `get_rack_macros`, `get_cue_points`, `get_warp_markers`, `convert_clip_time`
 
 ### Modify
-`create_midi_track`, `create_audio_track`, `create_clip`, `create_arrangement_audio_clips_batch`, `resample_master`, `add_notes_to_clip`, `capture_midi`, `capture_and_insert_scene`, `set_clip_name`, `set_clip_loop`, `crop_clip`, `set_clip_launch`, `delete_clip`, `delete_arrangement_clip`, `duplicate_clip`, `delete_track`, `duplicate_track`, `move_device`, `set_track_name`, `set_track_volume`, `set_track_panning`, `set_track_mute`, `set_track_solo`, `set_track_arm`, `set_send_level`, `set_crossfader`, `set_crossfade_assign`, `set_tempo`, `set_time_signature`, `set_metronome`, `fire_clip`, `stop_clip`, `fire_scene`, `create_scene`, `delete_scene`, `set_scene_name`, `start_playback`, `stop_playback`, `play_arrangement`, `load_instrument_or_effect`, `set_device_parameter`, `batch_set_device_parameters`, `delete_device`, `set_device_sidechain`, `insert_rack_chain`, `set_chain_mixer`, `apply_groove`, `clear_clip_groove`, `set_groove_amount`, `toggle_cue`, `jump_to_cue`, `show_view`, `add_warp_marker`, `set_song_time`, `set_record_mode`, `set_arrangement_overdub`, `set_back_to_arranger`, `set_arrangement_loop`, `set_clip_envelope`, `clear_clip_envelope`, `undo`, `redo`, `remove_notes`, `quantize_clip`, `duplicate_clip_loop`, `duplicate_region`, `set_device_enabled`, `create_return_track`, `delete_return_track`, `stop_all_clips`, `set_clip_gain`, `set_clip_pitch`, `set_clip_warping`, `set_clip_warp_mode`
+`create_midi_track`, `create_audio_track`, `create_clip`, `create_arrangement_audio_clips_batch`, `resample_master`, `add_notes_to_clip`, `apply_note_modifications`, `duplicate_clip_to_arrangement`, `capture_midi`, `capture_and_insert_scene`, `set_clip_name`, `set_clip_loop`, `crop_clip`, `set_clip_launch`, `set_clip_color`, `set_clip_muted`, `set_clip_markers`, `set_clip_signature`, `set_clip_ram_mode`, `quantize_pitch`, `delete_clip`, `delete_arrangement_clip`, `duplicate_clip`, `delete_track`, `duplicate_track`, `move_device`, `set_track_name`, `set_track_volume`, `set_track_panning`, `set_track_color`, `set_track_mute`, `set_track_solo`, `set_track_arm`, `set_send_level`, `set_crossfader`, `set_crossfade_assign`, `set_tempo`, `set_time_signature`, `set_metronome`, `tap_tempo`, `jump_by`, `continue_playing`, `set_session_record`, `set_session_automation_record`, `re_enable_automation`, `set_count_in_duration`, `set_exclusive_arm`, `set_punch`, `set_song_scale`, `fire_clip`, `stop_clip`, `fire_scene`, `create_scene`, `delete_scene`, `duplicate_scene`, `set_scene_name`, `set_scene_color`, `set_scene_tempo`, `set_scene_signature`, `start_playback`, `stop_playback`, `play_arrangement`, `load_instrument_or_effect`, `insert_device`, `set_device_parameter`, `batch_set_device_parameters`, `set_plugin_preset`, `delete_device`, `set_device_sidechain`, `insert_rack_chain`, `set_chain_mixer`, `add_macro`, `remove_macro`, `randomize_macros`, `store_macro_variation`, `recall_macro_variation`, `delete_macro_variation`, `set_simpler_sample_window`, `replace_simpler_sample`, `press_current_dialog_button`, `apply_groove`, `clear_clip_groove`, `set_groove_amount`, `toggle_cue`, `jump_to_cue`, `set_cue_volume`, `show_view`, `add_warp_marker`, `move_warp_marker`, `delete_warp_marker`, `set_song_time`, `set_record_mode`, `set_arrangement_overdub`, `set_back_to_arranger`, `set_arrangement_loop`, `set_clip_envelope`, `clear_clip_envelope`, `undo`, `redo`, `remove_notes`, `quantize_clip`, `duplicate_clip_loop`, `duplicate_region`, `set_device_enabled`, `create_return_track`, `delete_return_track`, `stop_all_clips`, `set_clip_gain`, `set_clip_pitch`, `set_clip_warping`, `set_clip_warp_mode`
 
 ### Arrangement
 The arrangement view supports a **full read-modify-write loop directly**, no session-view round-trip required:
@@ -212,6 +223,16 @@ Both views are useful — pick based on what you're doing:
 
 - **Use session view** for iteration: building a chord progression, dialing in a drum pattern, A/B-ing variations, or anywhere the agent benefits from tight `create_clip` → `add_notes_to_clip` → `fire_clip` loops where the user can hear changes immediately.
 - **Use arrangement view** for the final song structure: build, drops, breaks, transitions. Once a section is right, the agent should prefer `create_arrangement_midi_clip` / `create_arrangement_audio_clip` to place the section directly in arrangement at the target beat position rather than re-recording session clips. This keeps the timeline clean (no overdubbed takes), avoids overwriting existing arrangement material, and lets the agent edit the final song surgically — read what's there with `get_arrangement_clips` / `get_arrangement_clip_notes`, swap or delete with `delete_arrangement_clip`, and place new material at exact beat positions.
+
+`duplicate_clip_to_arrangement` is the direct session-to-arrangement copy operation. It copies the selected session clip, including its envelopes, to `destination_time` on the same track.
+
+### LOM batch boundaries
+
+- Rack commands add/remove/randomize macros and store/recall/delete variations. `get_rack_macros` reports `visible_macro_count`, `variation_count`, `selected_variation_index`, and mapped macros; new macro mappings remain GUI-only.
+- `insert_device` accepts native Live device UI names on Live 12.3+. Plug-ins and Max devices continue to use browser / `.adg` workflows.
+- `get_simpler_sample` and `set_simpler_sample_window` use integer sample frames. `replace_simpler_sample` requires Live 12.4+.
+- `apply_note_modifications` merges partial patches by `note_id`, preserving omitted fields and updating supported velocity, probability, and MPE fields in place.
+- `get_application_info` and `press_current_dialog_button` operate through the Remote Script. The latter requires the 9877 socket to already be bound; it cannot dismiss a startup dialog that prevents that socket from opening. See [MCP_ISSUES.md](MCP_ISSUES.md).
 
 ## Updating the Remote Script
 
@@ -253,6 +274,7 @@ to generate melody continuations. The agent reads a clip with
 - **Set and track structure control** — The public LOM does not expose save-set, insert-time, or track reparent/create-group operations.
 - **Analysis and routing gaps** — Sidechain source selection and LUFS/true-peak analysis are not exposed.
 - **Stale song reference** — First command after an Ableton restart may fail (retry works). The script auto-refreshes its internal reference.
+- **Startup dialogs** — `press_current_dialog_button` cannot help until the Remote Script has already bound port 9877; a crash-recovery or Save Untitled dialog that blocks binding must be handled outside this command path.
 
 ## Development
 

@@ -2,7 +2,7 @@
 // Runs inside Max's js object. All LiveAPI calls happen here.
 
 autowatch = 1;
-var HANDLER_VERSION = "2026-09-20.1";
+var HANDLER_VERSION = "2026-09-20.3";
 inlets = 1;
 outlets = 1;
 
@@ -137,6 +137,8 @@ function dispatch(cmdType, params) {
         case "get_device_sidechain": return cmd_get_device_sidechain(params);
         case "get_rack_chains": return cmd_get_rack_chains(params);
         case "get_rack_macros": return cmd_get_rack_macros(params);
+        case "get_simpler_sample": return cmd_get_simpler_sample(params);
+        case "get_application_info": return cmd_get_application_info(params);
         case "get_cue_points": return cmd_get_cue_points(params);
         case "get_warp_markers": return cmd_get_warp_markers(params);
         case "get_browser_tree": return cmd_get_browser_tree(params);
@@ -149,11 +151,13 @@ function dispatch(cmdType, params) {
         case "set_track_name": return cmd_set_track_name(params);
         case "set_track_volume": return cmd_set_track_volume(params);
         case "set_track_panning": return cmd_set_track_panning(params);
+        case "set_track_color": return cmd_set_track_color(params);
         case "set_track_mute": return cmd_set_track_mute(params);
         case "set_track_solo": return cmd_set_track_solo(params);
         case "set_track_arm": return cmd_set_track_arm(params);
         case "set_send_level": return cmd_set_send_level(params);
         case "set_crossfader": return cmd_set_crossfader(params);
+        case "set_cue_volume": return cmd_set_cue_volume(params);
         case "set_crossfade_assign": return cmd_set_crossfade_assign(params);
         case "set_groove_amount": return cmd_set_groove_amount(params);
         case "set_track_monitoring": return cmd_set_track_monitoring(params);
@@ -168,6 +172,16 @@ function dispatch(cmdType, params) {
         case "capture_and_insert_scene": return cmd_capture_and_insert_scene(params);
         case "toggle_cue": return cmd_toggle_cue(params);
         case "jump_to_cue": return cmd_jump_to_cue(params);
+        case "tap_tempo": return cmd_tap_tempo(params);
+        case "jump_by": return cmd_jump_by(params);
+        case "continue_playing": return cmd_continue_playing(params);
+        case "set_session_record": return cmd_set_session_record(params);
+        case "set_session_automation_record": return cmd_set_session_automation_record(params);
+        case "re_enable_automation": return cmd_re_enable_automation(params);
+        case "set_count_in_duration": return cmd_set_count_in_duration(params);
+        case "set_exclusive_arm": return cmd_set_exclusive_arm(params);
+        case "set_punch": return cmd_set_punch(params);
+        case "set_song_scale": return cmd_set_song_scale(params);
         case "show_view": return cmd_show_view(params);
         case "set_arrangement_overdub": return cmd_set_arrangement_overdub(params);
         case "set_back_to_arranger": return cmd_set_back_to_arranger(params);
@@ -183,6 +197,10 @@ function dispatch(cmdType, params) {
         case "create_scene": return cmd_create_scene(params);
         case "delete_scene": return cmd_delete_scene(params);
         case "set_scene_name": return cmd_set_scene_name(params);
+        case "set_scene_color": return cmd_set_scene_color(params);
+        case "duplicate_scene": return cmd_duplicate_scene(params);
+        case "set_scene_tempo": return cmd_set_scene_tempo(params);
+        case "set_scene_signature": return cmd_set_scene_signature(params);
         case "fire_scene": return cmd_fire_scene(params);
         case "create_clip": return cmd_create_clip(params);
         case "create_audio_clip": return cmd_create_audio_clip(params);
@@ -192,12 +210,23 @@ function dispatch(cmdType, params) {
         case "set_clip_loop": return cmd_set_clip_loop(params);
         case "crop_clip": return cmd_crop_clip(params);
         case "set_clip_launch": return cmd_set_clip_launch(params);
+        case "set_clip_color": return cmd_set_clip_color(params);
+        case "set_clip_muted": return cmd_set_clip_muted(params);
+        case "set_clip_markers": return cmd_set_clip_markers(params);
+        case "set_clip_signature": return cmd_set_clip_signature(params);
+        case "quantize_pitch": return cmd_quantize_pitch(params);
+        case "set_clip_ram_mode": return cmd_set_clip_ram_mode(params);
         case "apply_groove": return cmd_apply_groove(params);
         case "clear_clip_groove": return cmd_clear_clip_groove(params);
         case "add_warp_marker": return cmd_add_warp_marker(params);
+        case "move_warp_marker": return cmd_move_warp_marker(params);
+        case "delete_warp_marker": return cmd_delete_warp_marker(params);
+        case "convert_clip_time": return cmd_convert_clip_time(params);
         case "fire_clip": return cmd_fire_clip(params);
         case "stop_clip": return cmd_stop_clip(params);
         case "add_notes_to_clip": return cmd_add_notes_to_clip(params);
+        case "apply_note_modifications": return cmd_apply_note_modifications(params);
+        case "duplicate_clip_to_arrangement": return cmd_duplicate_clip_to_arrangement(params);
         case "create_arrangement_midi_clip": return cmd_create_arrangement_midi_clip(params);
         case "create_arrangement_audio_clip": return cmd_create_arrangement_audio_clip(params);
         case "delete_arrangement_clip": return cmd_delete_arrangement_clip(params);
@@ -206,11 +235,22 @@ function dispatch(cmdType, params) {
         // Devices, Browser & Automation
         case "set_device_parameter": return cmd_set_device_parameter(params);
         case "batch_set_device_parameters": return cmd_batch_set_device_parameters(params);
+        case "set_plugin_preset": return cmd_set_plugin_preset(params);
         case "delete_device": return cmd_delete_device(params);
         case "move_device": return cmd_move_device(params);
         case "set_device_sidechain": return cmd_set_device_sidechain(params);
         case "insert_rack_chain": return cmd_insert_rack_chain(params);
         case "set_chain_mixer": return cmd_set_chain_mixer(params);
+        case "add_macro": return cmd_add_macro(params);
+        case "remove_macro": return cmd_remove_macro(params);
+        case "randomize_macros": return cmd_randomize_macros(params);
+        case "store_macro_variation": return cmd_store_macro_variation(params);
+        case "recall_macro_variation": return cmd_recall_macro_variation(params);
+        case "delete_macro_variation": return cmd_delete_macro_variation(params);
+        case "insert_device": return cmd_insert_device(params);
+        case "set_simpler_sample_window": return cmd_set_simpler_sample_window(params);
+        case "replace_simpler_sample": return cmd_replace_simpler_sample(params);
+        case "press_current_dialog_button": return cmd_press_current_dialog_button(params);
         case "load_instrument_or_effect": return cmd_load_instrument_or_effect(params);
         case "load_browser_item": return cmd_load_instrument_or_effect(params);
         case "set_clip_envelope": return cmd_set_clip_envelope(params);
@@ -282,6 +322,121 @@ function param(params, key, defaultVal) {
     var v = params[key];
     if (v === undefined || v === null) return defaultVal;
     return v;
+}
+
+function canonicalPanning(panning) {
+    panning = Number(panning);
+    if (panning < 0) panning = (panning + 1) / 2;
+    if (!isFinite(panning) || panning < 0.0 || panning > 1.0) throw "Panning must be between 0.0 and 1.0";
+    return panning;
+}
+
+function unwrapNum(raw) {
+    if (raw instanceof Array) raw = raw[0];
+    return Number(raw);
+}
+
+function clipIsArrangement(params, clipPath) {
+    var aci = param(params, "arrangement_clip_index", null);
+    if (aci !== null && aci !== undefined) return true;
+    return apiGetOptionalNum(clipPath, "is_arrangement_clip") ? true : false;
+}
+
+function asBoolList(raw) {
+    if (raw === null || raw === undefined) return null;
+    var items;
+    if (raw instanceof Array) {
+        items = raw;
+    } else if (typeof raw === "string") {
+        var s = String(raw).replace(/^\s+|\s+$/g, "");
+        if (!s) return null;
+        if (s.charAt(0) === "[") {
+            try {
+                items = JSON.parse(s);
+            } catch (e) {
+                return null;
+            }
+        } else {
+            items = s.split(/[\s,]+/);
+        }
+    } else {
+        return null;
+    }
+    if (!items || items.length < 2) return null;
+    var out = [];
+    var i = 0;
+    if (typeof items[0] === "string" && items[0] !== "true" && items[0] !== "false" && isNaN(Number(items[0]))) {
+        i = 1;
+    }
+    for (; i < items.length; i++) {
+        var v = items[i];
+        if (typeof v === "boolean") {
+            out.push(v);
+        } else if (v === "true" || v === "false") {
+            out.push(v === "true");
+        } else {
+            var n = Number(v);
+            if (!isFinite(n)) return null;
+            out.push(n ? true : false);
+        }
+    }
+    return out.length >= 2 ? out : null;
+}
+
+function macroNumberFromName(label) {
+    if (!label) return null;
+    var s = String(label);
+    if (s.indexOf("Macro") !== 0) return null;
+    var i = 5;
+    while (i < s.length && s.charAt(i) === " ") i++;
+    if (i >= s.length) return null;
+    var n = parseInt(s.substring(i), 10);
+    if (!isFinite(n) || n < 1) return null;
+    return n;
+}
+
+function setColorFields(api, path, params, label) {
+    var colorIndex = param(params, "color_index", null);
+    var color = param(params, "color", null);
+    if (colorIndex === null && color === null) throw "set_" + label + "_color requires color_index and/or color";
+    if (colorIndex !== null) {
+        try {
+            api.set("color_index", Math.floor(Number(colorIndex)));
+        } catch (e) {
+            throw "color_index is not available on this " + label;
+        }
+    }
+    if (color !== null) {
+        try {
+            api.set("color", Math.floor(Number(color)));
+        } catch (e) {
+            throw "color is not available on this " + label;
+        }
+    }
+    var result = {};
+    var ci = apiGetOptionalNum(path, "color_index");
+    var c = apiGetOptionalNum(path, "color");
+    if (ci !== null) result.color_index = ci;
+    if (c !== null) result.color = c;
+    return result;
+}
+
+function jumpToCueIndex(index) {
+    var cuePath = "live_set cue_points " + index;
+    var cue = new LiveAPI(cuePath);
+    if (!cue.id || cue.id === "0") throw "Cue index out of range";
+    try {
+        cue.call("jump");
+    } catch (e) {
+        var song = new LiveAPI("live_set");
+        song.set("current_song_time", apiGetNum(cuePath, "time"));
+    }
+    return {
+        jumped: true,
+        index: index,
+        name: apiGetOptionalStr(cuePath, "name"),
+        time: apiGetOptionalNum(cuePath, "time")
+    };
 }
 
 // ─── Read Commands ───
@@ -437,20 +592,118 @@ function getDeviceType(devPath) {
         if (canDrumPads) return "drum_machine";
         var canChains = apiGetNum(devPath, "can_have_chains");
         if (canChains) return "rack";
+        var className = apiGetStr(devPath, "class_name");
+        var lomType = apiGetNum(devPath, "type");
+        if (className === "PluginDevice" || className === "AuPluginDevice") {
+            if (lomType === 1) return "instrument";
+            if (lomType === 2) return "audio_effect";
+            if (lomType === 4) return "midi_effect";
+            return "plugin";
+        }
         var classDisplay = apiGetStr(devPath, "class_display_name");
         if (classDisplay.toLowerCase().indexOf("instrument") >= 0) return "instrument";
-        var className = apiGetStr(devPath, "class_name");
         if (className.toLowerCase().indexOf("audio_effect") >= 0) return "audio_effect";
         if (className.toLowerCase().indexOf("midi_effect") >= 0) return "midi_effect";
+        if (lomType === 1) return "instrument";
+        if (lomType === 2) return "audio_effect";
+        if (lomType === 4) return "midi_effect";
         return "unknown";
     } catch (e) {
         return "unknown";
     }
 }
 
+function parameterGroup(name) {
+    var raw = String(name || "");
+    var lower = raw.toLowerCase();
+    if (raw.indexOf(">") >= 0) return "Filter routing";
+    if (lower === "device on" || lower.indexOf("device on") === 0) return "Device";
+    if (lower.indexOf("macro") === 0) return "Macros";
+    if (lower.indexOf("noise") === 0) return "Noise";
+    if (lower.indexOf("sub") === 0) return "Sub oscillator";
+    if (lower.indexOf("main") === 0 || lower === "master vol" || lower === "master volume") return "Main";
+    if (lower.indexOf("clip player") === 0 || lower.indexOf("arp") === 0) return "Playback";
+    if (lower === "key" || lower === "scale") return "Scale";
+    if (lower === "swing") return "Groove";
+    if (lower === "pitch bend" || lower === "bend up" || lower === "bend down" ||
+        lower === "mod wheel" || lower === "transpose" || lower.indexOf("porta") === 0 ||
+        lower === "mono toggle" || lower === "legato" || lower.indexOf("bend ") === 0) {
+        return "Voice";
+    }
+    var parts = raw.split(" ");
+    if (parts.length >= 2) {
+        var head = parts[0].toLowerCase();
+        var second = parts[1];
+        if (head === "filter" && /^\d+$/.test(second)) return "Filter " + second;
+        if ((head === "env" || head === "envelope") && /^\d+$/.test(second)) return "Envelope " + second;
+        if (head === "lfo" && /^\d+$/.test(second)) return "LFO " + second;
+    }
+    if (parts.length >= 1 && (parts[0] === "A" || parts[0] === "B" || parts[0] === "C")) {
+        return "Oscillator " + parts[0];
+    }
+    return "Other";
+}
+
+function attachGroups(parameters) {
+    var order = [];
+    var buckets = {};
+    var i;
+    for (i = 0; i < parameters.length; i++) {
+        var group = parameters[i].group || parameterGroup(parameters[i].name);
+        parameters[i].group = group;
+        if (!buckets[group]) {
+            order.push(group);
+            buckets[group] = [];
+        }
+        buckets[group].push({ index: parameters[i].index, name: parameters[i].name });
+    }
+    var groups = [];
+    for (i = 0; i < order.length; i++) {
+        groups.push({
+            name: order[i],
+            count: buckets[order[i]].length,
+            parameters: buckets[order[i]]
+        });
+    }
+    return groups;
+}
+
+function paramQueryMatches(p, query) {
+    if (!query) return true;
+    var q = String(query).toLowerCase();
+    var fields = [p.name, p.original_name, p.display_value, p.group];
+    for (var i = 0; i < fields.length; i++) {
+        if (fields[i] && String(fields[i]).toLowerCase().indexOf(q) >= 0) return true;
+    }
+    return false;
+}
+
+function findParameterIndex(parameters, parameterIndex, parameterName) {
+    if (parameterIndex !== null && parameterIndex !== undefined) {
+        if (parameterIndex < 0 || parameterIndex >= parameters.length) throw "Parameter index out of range";
+        return parameterIndex;
+    }
+    if (!parameterName) throw "parameter_index or parameter_name is required";
+    var needle = String(parameterName).toLowerCase();
+    var exact = [];
+    var partial = [];
+    var i;
+    for (i = 0; i < parameters.length; i++) {
+        var n = String(parameters[i].name || "").toLowerCase();
+        if (n === needle) exact.push(i);
+        else if (n.indexOf(needle) >= 0) partial.push(i);
+    }
+    if (exact.length === 1) return exact[0];
+    if (exact.length > 1) throw "parameter name is ambiguous";
+    if (partial.length === 1) return partial[0];
+    if (partial.length > 1) throw "parameter name is ambiguous";
+    throw "parameter name not found: " + parameterName;
+}
+
 function cmd_get_device_parameters(params) {
     var trackIndex = param(params, "track_index", 0);
     var deviceIndex = param(params, "device_index", 0);
+    var query = param(params, "query", null);
     var trackPath = getTrackPath(trackIndex);
     var devPath = trackPath + " devices " + deviceIndex;
 
@@ -459,10 +712,12 @@ function cmd_get_device_parameters(params) {
 
     var trackName = apiGetStr(trackPath, "name");
     var devName = apiGetStr(devPath, "name");
+    var className = apiGetStr(devPath, "class_name");
     var paramCount = apiGetCount(devPath, "parameters");
     var parameters = [];
+    var i;
 
-    for (var i = 0; i < paramCount; i++) {
+    for (i = 0; i < paramCount; i++) {
         var pPath = devPath + " parameters " + i;
         var pName = apiGetStr(pPath, "name");
         var pVal = apiGetNum(pPath, "value");
@@ -470,6 +725,8 @@ function cmd_get_device_parameters(params) {
         var pMax = apiGetNum(pPath, "max");
         var pIsQuant = apiGetNum(pPath, "is_quantized");
         var pIsEnabled = apiGetNum(pPath, "is_enabled");
+        var orig = apiGetOptionalStr(pPath, "original_name");
+        var display = apiGetOptionalStr(pPath, "display_value");
         var normVal = 0;
         if ((pMax - pMin) !== 0) {
             normVal = (pVal - pMin) / (pMax - pMin);
@@ -477,21 +734,59 @@ function cmd_get_device_parameters(params) {
         parameters.push({
             index: i,
             name: pName,
+            original_name: orig,
             value: pVal,
             normalized_value: normVal,
             min: pMin,
             max: pMax,
             is_quantized: pIsQuant ? true : false,
-            is_enabled: pIsEnabled ? true : false
+            is_enabled: pIsEnabled ? true : false,
+            display_value: display,
+            group: parameterGroup(pName)
         });
     }
 
+    var matched = [];
+    if (query) {
+        var qExact = String(query).toLowerCase();
+        for (i = 0; i < parameters.length; i++) {
+            if (String(parameters[i].group || "").toLowerCase() === qExact) matched.push(parameters[i]);
+        }
+    }
+    if (!query) {
+        matched = parameters;
+    } else if (matched.length === 0) {
+        for (i = 0; i < parameters.length; i++) {
+            if (paramQueryMatches(parameters[i], query)) matched.push(parameters[i]);
+        }
+    }
+    var groups = attachGroups(matched);
+
+    var presets = [];
+    try {
+        var rawPresets = new LiveAPI(devPath).get("presets");
+        if (rawPresets && rawPresets.length) {
+            for (i = 0; i < rawPresets.length; i++) {
+                if (rawPresets[i] !== "id") presets.push(String(rawPresets[i]));
+            }
+        }
+    } catch (presetErr) {}
+
+    var isPlugin = (className === "PluginDevice" || className === "AuPluginDevice");
     return {
         track_index: trackIndex,
         track_name: trackName,
         device_index: deviceIndex,
         device_name: devName,
-        parameters: parameters
+        class_name: className,
+        type: getDeviceType(devPath),
+        is_plugin: isPlugin,
+        configured_parameter_count: parameters.length,
+        presets: presets,
+        selected_preset_index: isPlugin ? apiGetOptionalNum(devPath, "selected_preset_index") : null,
+        query: query,
+        groups: groups,
+        parameters: matched
     };
 }
 
@@ -609,30 +904,8 @@ function cmd_get_clip_notes(params) {
     var clipLength = apiGetNum(clipPath, "length");
     var clipName = apiGetStr(clipPath, "name");
 
-    // Use get_notes to retrieve notes: returns [pitch, start, duration, velocity, mute, ...]
     var clip = new LiveAPI(clipPath);
-    clip.call("select_all_notes");
-    var rawNotes = clip.call("get_selected_notes");
-
-    var noteList = [];
-    // get_selected_notes returns: "notes" count pitch start duration velocity mute [repeated] "done"
-    if (rawNotes && rawNotes.length > 2) {
-        var count = Number(rawNotes[1]);
-        var idx = 2; // skip "notes" and count
-        for (var n = 0; n < count; n++) {
-            if (idx + 5 > rawNotes.length) break;
-            noteList.push({
-                pitch: Number(rawNotes[idx + 1]),
-                start_time: Number(rawNotes[idx + 2]),
-                duration: Number(rawNotes[idx + 3]),
-                velocity: Number(rawNotes[idx + 4]),
-                mute: false
-            });
-            idx += 6; // skip "note" pitch start dur vel mute
-        }
-    }
-
-    clip.call("deselect_all_notes");
+    var noteList = readAllNotes(clip, clipLength);
 
     return {
         track_index: trackIndex,
@@ -659,6 +932,17 @@ function cmd_get_clip_envelope(params) {
     var paramRange = pMax - pMin;
 
     var clipLength = apiGetNum(clipPath, "length");
+
+    if (clipIsArrangement(params, clipPath)) {
+        return {
+            track_index: trackIndex,
+            clip_index: clipIndex,
+            parameter_name: paramName,
+            has_envelope: false,
+            points: [],
+            note: "Arrangement clip envelopes are not in the LOM (session only)"
+        };
+    }
 
     // Try to get automation envelope via the clip
     var clip = new LiveAPI(clipPath);
@@ -789,8 +1073,7 @@ function cmd_set_track_volume(params) {
 
 function cmd_set_track_panning(params) {
     var trackIndex = param(params, "track_index", 0);
-    var panning = param(params, "panning", 0.0);
-    if (panning < 0.0 || panning > 1.0) throw "Panning must be between 0.0 and 1.0";
+    var panning = canonicalPanning(param(params, "panning", 0.0));
 
     var trackPath = getTrackPath(trackIndex);
     var panPath = trackPath + " mixer_device panning";
@@ -1255,24 +1538,7 @@ function cmd_add_notes_to_clip(params) {
     var clip = new LiveAPI(clipPath);
 
     if (!apiGetNum(clipPath, "is_midi_clip")) throw "Not a MIDI clip";
-
-    // Append: set_notes replaces the whole clip. Empty selection +
-    // replace_selected_notes adds without deleting existing notes.
-    // CRITICAL: time and duration must be strings with decimal points to avoid "Invalid syntax" bug
-    clip.call("deselect_all_notes");
-    clip.call("replace_selected_notes");
-    clip.call("notes", notes.length);
-    for (var i = 0; i < notes.length; i++) {
-        var n = notes[i];
-        var pitch = n.pitch !== undefined ? Math.floor(n.pitch) : 60;
-        var startTime = n.start_time !== undefined ? Number(n.start_time).toFixed(8) : "0.0";
-        var duration = n.duration !== undefined ? Number(n.duration).toFixed(8) : "0.25";
-        var velocity = n.velocity !== undefined ? Math.floor(n.velocity) : 100;
-        var mute = n.mute ? 1 : 0;
-        clip.call("note", pitch, startTime, duration, velocity, mute);
-    }
-    clip.call("done");
-
+    writeNotes(clip, notes);
     return { note_count: notes.length };
 }
 
@@ -1281,10 +1547,19 @@ function cmd_add_notes_to_clip(params) {
 function cmd_set_device_parameter(params) {
     var trackIndex = param(params, "track_index", 0);
     var deviceIndex = param(params, "device_index", 0);
-    var parameterIndex = param(params, "parameter_index", 0);
+    var parameterIndex = param(params, "parameter_index", null);
+    var parameterName = param(params, "parameter_name", null);
     var value = param(params, "value", 0.0);
     var trackPath = getTrackPath(trackIndex);
-    var pPath = trackPath + " devices " + deviceIndex + " parameters " + parameterIndex;
+    var devPath = trackPath + " devices " + deviceIndex;
+    var paramCount = apiGetCount(devPath, "parameters");
+    var list = [];
+    var i;
+    for (i = 0; i < paramCount; i++) {
+        list.push({ index: i, name: apiGetStr(devPath + " parameters " + i, "name") });
+    }
+    var idx = findParameterIndex(list, parameterIndex, parameterName);
+    var pPath = devPath + " parameters " + idx;
 
     var pApi = new LiveAPI(pPath);
     if (!pApi.id || pApi.id === "0") throw "Parameter index out of range";
@@ -1297,38 +1572,96 @@ function cmd_set_device_parameter(params) {
     pApi.set("value", actualValue);
 
     return {
+        parameter_index: idx,
         parameter_name: apiGetStr(pPath, "name"),
         value: apiGetNum(pPath, "value"),
-        normalized_value: value
+        normalized_value: value,
+        display_value: apiGetOptionalStr(pPath, "display_value")
+    };
+}
+
+function cmd_set_plugin_preset(params) {
+    var trackIndex = param(params, "track_index", 0);
+    var deviceIndex = param(params, "device_index", 0);
+    var presetIndex = param(params, "preset_index", null);
+    var presetName = param(params, "preset_name", null);
+    var devPath = getTrackPath(trackIndex) + " devices " + deviceIndex;
+    var className = apiGetStr(devPath, "class_name");
+    if (className !== "PluginDevice" && className !== "AuPluginDevice") {
+        throw "Device is not a VST/AU plug-in";
+    }
+    var presets = [];
+    try {
+        var raw = new LiveAPI(devPath).get("presets");
+        var i;
+        if (raw && raw.length) {
+            for (i = 0; i < raw.length; i++) {
+                if (raw[i] !== "id") presets.push(String(raw[i]));
+            }
+        }
+    } catch (e) {}
+    if (presetName) {
+        var needle = String(presetName).toLowerCase();
+        var matches = [];
+        var j;
+        for (j = 0; j < presets.length; j++) {
+            if (presets[j].toLowerCase() === needle) matches.push(j);
+        }
+        if (matches.length !== 1) throw "preset_name not found or ambiguous (host bank may be empty for VST3)";
+        presetIndex = matches[0];
+    }
+    if (presetIndex === null || presetIndex === undefined) throw "preset_index or preset_name is required";
+    var dev = new LiveAPI(devPath);
+    dev.set("selected_preset_index", presetIndex);
+    var selected = apiGetNum(devPath, "selected_preset_index");
+    return {
+        device_name: apiGetStr(devPath, "name"),
+        selected_preset_index: selected,
+        preset_name: (selected >= 0 && selected < presets.length) ? presets[selected] : null,
+        preset_count: presets.length,
+        note: "This is the plug-in host program bank, not Serum .serumpreset files."
     };
 }
 
 function cmd_batch_set_device_parameters(params) {
     var trackIndex = param(params, "track_index", 0);
     var deviceIndex = param(params, "device_index", 0);
-    var parameterIndices = param(params, "parameter_indices", []);
+    var parameterIndices = param(params, "parameter_indices", null);
+    var parameterNames = param(params, "parameter_names", null);
     var values = param(params, "values", []);
     var trackPath = getTrackPath(trackIndex);
     var devPath = trackPath + " devices " + deviceIndex;
-
-    if (parameterIndices.length !== values.length) throw "parameter_indices and values must have the same length";
+    var paramCount = apiGetCount(devPath, "parameters");
+    var list = [];
+    var i;
+    for (i = 0; i < paramCount; i++) {
+        list.push({ index: i, name: apiGetStr(devPath + " parameters " + i, "name") });
+    }
+    var useNames = parameterNames && parameterNames.length;
+    var keys = useNames ? parameterNames : (parameterIndices || []);
+    if (keys.length !== values.length) throw "names/indices and values must have the same length";
 
     var updated = [];
-    var paramCount = apiGetCount(devPath, "parameters");
-
-    for (var i = 0; i < parameterIndices.length; i++) {
-        var pIdx = parameterIndices[i];
+    var skipped = [];
+    for (i = 0; i < keys.length; i++) {
         var val = values[i];
-        if (pIdx < 0 || pIdx >= paramCount) continue;
-        if (val < 0.0 || val > 1.0) continue;
-
+        if (val < 0.0 || val > 1.0) {
+            skipped.push({ name: keys[i], reason: "value_out_of_range" });
+            continue;
+        }
+        var pIdx;
+        try {
+            pIdx = useNames ? findParameterIndex(list, null, keys[i]) : findParameterIndex(list, keys[i], null);
+        } catch (lookupErr) {
+            skipped.push({ name: keys[i], reason: "not_configured" });
+            continue;
+        }
         var pPath = devPath + " parameters " + pIdx;
         var pMin = apiGetNum(pPath, "min");
         var pMax = apiGetNum(pPath, "max");
         var actualVal = pMin + val * (pMax - pMin);
         var p = new LiveAPI(pPath);
         p.set("value", actualVal);
-
         updated.push({
             index: pIdx,
             name: apiGetStr(pPath, "name"),
@@ -1339,7 +1672,9 @@ function cmd_batch_set_device_parameters(params) {
 
     return {
         updated_count: updated.length,
-        parameters: updated
+        skipped_count: skipped.length,
+        parameters: updated,
+        skipped: skipped
     };
 }
 
@@ -1378,6 +1713,10 @@ function cmd_set_clip_envelope(params) {
 
     var clip = new LiveAPI(clipPath);
     var paramApi = new LiveAPI(pPath);
+
+    if (clipIsArrangement(params, clipPath)) {
+        throw "Arrangement clip envelopes are not in the LOM (session only)";
+    }
 
     // Try to get or create envelope
     var envId = clip.call("automation_envelope", "id", paramApi.id);
@@ -1569,13 +1908,7 @@ function readAllNotes(clip, clipLength) {
         var notes = data.notes || [];
         var out = [];
         for (var i = 0; i < notes.length; i++) {
-            out.push({
-                pitch: Number(notes[i].pitch),
-                start_time: Number(notes[i].start_time),
-                duration: Number(notes[i].duration),
-                velocity: Number(notes[i].velocity),
-                mute: notes[i].mute ? true : false
-            });
+            out.push(copyNoteDictionary(notes[i]));
         }
         return out;
     } catch (e) {
@@ -1603,20 +1936,36 @@ function readAllNotes(clip, clipLength) {
     return list;
 }
 
-// Write notes with the set_notes protocol. Time/duration MUST be decimal strings (see troubleshooting #7).
-function writeNotes(clip, notes) {
-    clip.call("set_notes");
-    clip.call("notes", notes.length);
-    for (var i = 0; i < notes.length; i++) {
-        var n = notes[i];
-        var pitch = n.pitch !== undefined ? Math.floor(n.pitch) : 60;
-        var startTime = n.start_time !== undefined ? Number(n.start_time).toFixed(8) : "0.0";
-        var duration = n.duration !== undefined ? Number(n.duration).toFixed(8) : "0.25";
-        var velocity = n.velocity !== undefined ? Math.floor(n.velocity) : 100;
-        var mute = n.mute ? 1 : 0;
-        clip.call("note", pitch, startTime, duration, velocity, mute);
+function copyNoteDictionary(note) {
+    var copy = {};
+    var key;
+    for (key in note) {
+        if (note.hasOwnProperty(key)) copy[key] = note[key];
     }
-    clip.call("done");
+    if (copy.note_id !== undefined && copy.note_id !== null) copy.note_id = Number(copy.note_id);
+    if (copy.pitch !== undefined) copy.pitch = Number(copy.pitch);
+    if (copy.start_time !== undefined) copy.start_time = Number(copy.start_time);
+    if (copy.duration !== undefined) copy.duration = Number(copy.duration);
+    if (copy.velocity !== undefined) copy.velocity = Number(copy.velocity);
+    if (copy.mute !== undefined) copy.mute = copy.mute ? true : false;
+    return copy;
+}
+
+// Live 11+ add_new_notes. Do not call set_notes / replace_selected_notes (Live 11 modal).
+function writeNotes(clip, notes) {
+    var specs = [];
+    var i;
+    for (i = 0; i < notes.length; i++) {
+        var n = notes[i];
+        specs.push({
+            pitch: n.pitch !== undefined ? Math.floor(n.pitch) : 60,
+            start_time: n.start_time !== undefined ? Number(n.start_time) : 0.0,
+            duration: n.duration !== undefined ? Number(n.duration) : 0.25,
+            velocity: n.velocity !== undefined ? Math.floor(n.velocity) : 100,
+            mute: n.mute ? 1 : 0
+        });
+    }
+    clip.call("add_new_notes", { notes: specs });
     return notes.length;
 }
 
@@ -2052,7 +2401,7 @@ function cmd_set_chain_mixer(params) {
     if (mute !== null) chain.set("mute", mute ? 1 : 0);
     if (solo !== null) chain.set("solo", solo ? 1 : 0);
     if (volume !== null) setNormalizedMixerParam(chainPath + " mixer_device volume", Number(volume), "Volume");
-    if (panning !== null) setNormalizedMixerParam(chainPath + " mixer_device panning", Number(panning), "Panning");
+    if (panning !== null) setNormalizedMixerParam(chainPath + " mixer_device panning", canonicalPanning(panning), "Panning");
     var result = {
         track_index: trackIndex,
         device_index: deviceIndex,
@@ -2069,43 +2418,7 @@ function cmd_set_chain_mixer(params) {
 }
 
 function cmd_get_rack_macros(params) {
-    var trackIndex = param(params, "track_index", 0);
-    var deviceIndex = param(params, "device_index", 0);
-    var devPath = getTrackPath(trackIndex) + " devices " + deviceIndex;
-    var dev = new LiveAPI(devPath);
-    if (!dev.id || dev.id === "0") throw "Device index out of range";
-    var paramCount = apiGetOptionalCount(devPath, "parameters");
-    var macros = [];
-    for (var i = 0; i < paramCount; i++) {
-        var pPath = devPath + " parameters " + i;
-        var pName = apiGetOptionalStr(pPath, "name") || "";
-        if (pName.indexOf("Macro") === 0) {
-            var pVal = apiGetOptionalNum(pPath, "value");
-            var pMin = apiGetOptionalNum(pPath, "min");
-            var pMax = apiGetOptionalNum(pPath, "max");
-            var normVal = 0;
-            if (pMin !== null && pMax !== null && (pMax - pMin) !== 0 && pVal !== null) {
-                normVal = (pVal - pMin) / (pMax - pMin);
-            }
-            macros.push({
-                index: i,
-                name: pName,
-                value: pVal,
-                normalized_value: normVal
-            });
-        }
-    }
-    var result = {
-        track_index: trackIndex,
-        device_index: deviceIndex,
-        macros: macros
-    };
-    var mapped = apiGetOptionalNum(devPath, "macros_mapped");
-    if (mapped === null) mapped = apiGetOptionalNum(devPath, "has_macro_mappings");
-    if (mapped !== null) result.macros_mapped = mapped ? true : false;
-    var vis = apiGetOptionalNum(devPath, "visible_macro_count");
-    if (vis !== null) result.visible_macro_count = vis;
-    return result;
+    return rackMacroState(rackDevice(params));
 }
 
 function cmd_move_device(params) {
@@ -2120,8 +2433,12 @@ function cmd_move_device(params) {
     try {
         track.call("move_device", deviceIndex, targetIndex);
     } catch (e) {
-        var song = new LiveAPI("live_set");
-        song.call("move_device", "id", device.id, "id", track.id, targetIndex);
+        try {
+            var song = new LiveAPI("live_set");
+            song.call("move_device", "id", device.id, "id", track.id, targetIndex);
+        } catch (e2) {
+            throw "Live cannot place an instrument before MIDI effects; load already inserts MIDI FX before the instrument; use move_device to reorder MIDI FX";
+        }
     }
     return { moved: true, target_index: targetIndex };
 }
@@ -2139,7 +2456,19 @@ function cmd_crop_clip(params) {
     var clipPath = sessionClipPath(params);
     var clip = new LiveAPI(clipPath);
     clip.call("crop");
-    return { cropped: true };
+    var length = apiGetNum(clipPath, "length");
+    clip.set("loop_end", length);
+    clip.set("loop_start", 0);
+    clip.set("end_marker", length);
+    clip.set("start_marker", 0);
+    return {
+        cropped: true,
+        length: apiGetNum(clipPath, "length"),
+        loop_start: apiGetOptionalNum(clipPath, "loop_start"),
+        loop_end: apiGetOptionalNum(clipPath, "loop_end"),
+        start_marker: apiGetOptionalNum(clipPath, "start_marker"),
+        end_marker: apiGetOptionalNum(clipPath, "end_marker")
+    };
 }
 
 function cmd_set_clip_launch(params) {
@@ -2187,25 +2516,48 @@ function cmd_toggle_cue() {
 function cmd_jump_to_cue(params) {
     var direction = param(params, "direction", null);
     var index = param(params, "index", null);
-    var song = new LiveAPI("live_set");
-    if (direction === "next") {
-        song.call("jump_to_next_cue");
-        return { jumped: true, direction: "next" };
-    }
-    if (direction === "prev") {
-        song.call("jump_to_prev_cue");
-        return { jumped: true, direction: "prev" };
+    if (direction === "next" || direction === "prev") {
+        var now = apiGetNum("live_set", "current_song_time");
+        var count = apiGetOptionalCount("live_set", "cue_points");
+        if (!count) throw "No cue points";
+        var cues = [];
+        var i;
+        for (i = 0; i < count; i++) {
+            var p = "live_set cue_points " + i;
+            cues.push({
+                index: i,
+                name: apiGetOptionalStr(p, "name"),
+                time: apiGetOptionalNum(p, "time")
+            });
+        }
+        var chosen = null;
+        for (i = 0; i < cues.length; i++) {
+            var t = cues[i].time;
+            if (t === null || t === undefined) continue;
+            if (direction === "next") {
+                if (t > now && (chosen === null || t < chosen.time)) chosen = cues[i];
+            } else if (t < now && (chosen === null || t > chosen.time)) {
+                chosen = cues[i];
+            }
+        }
+        if (chosen === null) {
+            for (i = 0; i < cues.length; i++) {
+                var wt = cues[i].time;
+                if (wt === null || wt === undefined) continue;
+                if (direction === "next") {
+                    if (chosen === null || wt < chosen.time) chosen = cues[i];
+                } else if (chosen === null || wt > chosen.time) {
+                    chosen = cues[i];
+                }
+            }
+        }
+        if (chosen === null) throw "No cue points";
+        var jumped = jumpToCueIndex(chosen.index);
+        jumped.direction = direction;
+        return jumped;
     }
     if (index !== null && index !== undefined) {
-        var cuePath = "live_set cue_points " + index;
-        var cue = new LiveAPI(cuePath);
-        if (!cue.id || cue.id === "0") throw "Cue index out of range";
-        try {
-            cue.call("jump");
-        } catch (e) {
-            song.set("current_song_time", apiGetNum(cuePath, "time"));
-        }
-        return { jumped: true, index: index };
+        return jumpToCueIndex(index);
     }
     throw "jump_to_cue requires direction (next/prev) or index";
 }
@@ -2259,15 +2611,777 @@ function cmd_add_warp_marker(params) {
     var clipPath = sessionClipPath(params);
     if (!apiGetOptionalNum(clipPath, "is_audio_clip")) throw "Not an audio clip";
     var beatTime = Number(param(params, "beat_time", 0));
+    var sampleTime = param(params, "sample_time", null);
     var clip = new LiveAPI(clipPath);
+    if (apiGetOptionalNum(clipPath, "warping") !== null) {
+        clip.set("warping", 1);
+    }
+    var marker = { beat_time: beatTime };
+    if (sampleTime !== null && sampleTime !== undefined) marker.sample_time = Number(sampleTime);
+    var added = false;
+    var err = null;
     try {
-        clip.call("add_warp_marker", beatTime);
-    } catch (e) {
+        clip.call("add_warp_marker", marker);
+        added = true;
+    } catch (e1) {
+        err = e1;
         try {
-            clip.call("add_warp_marker", JSON.stringify({ beat_time: beatTime }));
+            clip.call("add_warp_marker", beatTime);
+            added = true;
         } catch (e2) {
-            throw "add_warp_marker not present on this clip: " + e;
+            err = e2;
         }
     }
-    return { added: true, beat_time: beatTime };
+    if (!added) throw "add_warp_marker failed: " + err;
+    var result = { added: true, beat_time: beatTime };
+    if (sampleTime !== null && sampleTime !== undefined) result.sample_time = Number(sampleTime);
+    return result;
+}
+
+function cmd_move_warp_marker(params) {
+    var clipPath = sessionClipPath(params);
+    if (!apiGetOptionalNum(clipPath, "is_audio_clip")) throw "Not an audio clip";
+    var beatTime = Number(param(params, "beat_time", 0));
+    var distance = Number(param(params, "beat_time_distance", 0));
+    var clip = new LiveAPI(clipPath);
+    try {
+        clip.call("move_warp_marker", beatTime, distance);
+    } catch (e) {
+        throw "move_warp_marker is not available on this clip";
+    }
+    return { moved: true, beat_time: beatTime, beat_time_distance: distance };
+}
+
+function cmd_delete_warp_marker(params) {
+    var clipPath = sessionClipPath(params);
+    if (!apiGetOptionalNum(clipPath, "is_audio_clip")) throw "Not an audio clip";
+    var beatTime = Number(param(params, "beat_time", 0));
+    var clip = new LiveAPI(clipPath);
+    try {
+        clip.call("remove_warp_marker", beatTime);
+    } catch (e) {
+        throw "remove_warp_marker is not available on this clip";
+    }
+    return { deleted: true, beat_time: beatTime };
+}
+
+function cmd_convert_clip_time(params) {
+    var clipPath = sessionClipPath(params);
+    var clip = new LiveAPI(clipPath);
+    var beatTime = param(params, "beat_time", null);
+    var sampleTime = param(params, "sample_time", null);
+    if (beatTime === null && sampleTime === null) throw "convert_clip_time requires beat_time or sample_time";
+    var result = {};
+    if (beatTime !== null) {
+        try {
+            result.beat_time = Number(beatTime);
+            result.sample_time = unwrapNum(clip.call("beat_to_sample_time", Number(beatTime)));
+        } catch (e) {
+            throw "beat_to_sample_time is not available on this clip";
+        }
+    } else {
+        try {
+            result.sample_time = Number(sampleTime);
+            result.beat_time = unwrapNum(clip.call("sample_to_beat_time", Number(sampleTime)));
+        } catch (e) {
+            throw "sample_to_beat_time is not available on this clip";
+        }
+    }
+    return result;
+}
+
+function cmd_set_clip_color(params) {
+    var clipPath = sessionClipPath(params);
+    var clip = new LiveAPI(clipPath);
+    return setColorFields(clip, clipPath, params, "clip");
+}
+
+function cmd_set_clip_muted(params) {
+    var clipPath = sessionClipPath(params);
+    var muted = param(params, "muted", true);
+    var clip = new LiveAPI(clipPath);
+    try {
+        clip.set("muted", muted ? 1 : 0);
+    } catch (e) {
+        throw "muted is not available on this clip";
+    }
+    return { muted: apiGetOptionalNum(clipPath, "muted") ? true : false };
+}
+
+function cmd_set_clip_markers(params) {
+    var clipPath = sessionClipPath(params);
+    var startMarker = param(params, "start_marker", null);
+    var endMarker = param(params, "end_marker", null);
+    if (startMarker === null && endMarker === null) throw "set_clip_markers requires start_marker and/or end_marker";
+    var clip = new LiveAPI(clipPath);
+    try {
+        if (endMarker !== null) clip.set("end_marker", Number(endMarker));
+        if (startMarker !== null) clip.set("start_marker", Number(startMarker));
+    } catch (e) {
+        throw "start_marker/end_marker are not available on this clip";
+    }
+    return {
+        start_marker: apiGetOptionalNum(clipPath, "start_marker"),
+        end_marker: apiGetOptionalNum(clipPath, "end_marker")
+    };
+}
+
+function cmd_set_clip_signature(params) {
+    var clipPath = sessionClipPath(params);
+    var numerator = param(params, "numerator", null);
+    var denominator = param(params, "denominator", null);
+    if (numerator === null && denominator === null) throw "set_clip_signature requires numerator and/or denominator";
+    var clip = new LiveAPI(clipPath);
+    try {
+        if (numerator !== null) clip.set("signature_numerator", Math.floor(Number(numerator)));
+        if (denominator !== null) clip.set("signature_denominator", Math.floor(Number(denominator)));
+    } catch (e) {
+        throw "clip time signature is not available on this clip";
+    }
+    return {
+        numerator: apiGetOptionalNum(clipPath, "signature_numerator"),
+        denominator: apiGetOptionalNum(clipPath, "signature_denominator")
+    };
+}
+
+function cmd_quantize_pitch(params) {
+    var clipPath = sessionClipPath(params);
+    var pitch = Math.floor(Number(param(params, "pitch", 0)));
+    var grid = param(params, "grid", 5);
+    var strength = param(params, "strength", 1.0);
+    var clip = new LiveAPI(clipPath);
+    try {
+        clip.call("quantize_pitch", pitch, grid, strength);
+    } catch (e) {
+        throw "quantize_pitch is not available on this clip";
+    }
+    return { quantized: true, pitch: pitch, grid: grid, strength: strength };
+}
+
+function cmd_set_clip_ram_mode(params) {
+    var clipPath = sessionClipPath(params);
+    var ramMode = param(params, "ram_mode", true);
+    var clip = new LiveAPI(clipPath);
+    try {
+        clip.set("ram_mode", ramMode ? 1 : 0);
+    } catch (e) {
+        throw "ram_mode is not available on this clip";
+    }
+    return { ram_mode: apiGetOptionalNum(clipPath, "ram_mode") ? true : false };
+}
+
+function cmd_tap_tempo() {
+    var song = new LiveAPI("live_set");
+    try {
+        song.call("tap_tempo");
+    } catch (e) {
+        throw "tap_tempo is not available";
+    }
+    return { tempo: apiGetNum("live_set", "tempo") };
+}
+
+function cmd_jump_by(params) {
+    var beats = Number(param(params, "beats", 0));
+    var song = new LiveAPI("live_set");
+    try {
+        song.call("jump_by", beats);
+    } catch (e) {
+        throw "jump_by is not available";
+    }
+    return { jumped_by: beats, current_song_time: apiGetNum("live_set", "current_song_time") };
+}
+
+function cmd_continue_playing() {
+    var song = new LiveAPI("live_set");
+    try {
+        song.call("continue_playing");
+    } catch (e) {
+        throw "continue_playing is not available";
+    }
+    var playing = apiGetOptionalNum("live_set", "is_playing");
+    return { continued: true, is_playing: playing !== null ? (playing ? true : false) : true };
+}
+
+function cmd_set_session_record(params) {
+    var on = param(params, "on", true);
+    var song = new LiveAPI("live_set");
+    try {
+        song.set("session_record", on ? 1 : 0);
+    } catch (e) {
+        throw "session_record is not available";
+    }
+    return { session_record: apiGetOptionalNum("live_set", "session_record") ? true : false };
+}
+
+function cmd_set_session_automation_record(params) {
+    var on = param(params, "on", true);
+    var song = new LiveAPI("live_set");
+    try {
+        song.set("session_automation_record", on ? 1 : 0);
+    } catch (e) {
+        throw "session_automation_record is not available";
+    }
+    return { session_automation_record: apiGetOptionalNum("live_set", "session_automation_record") ? true : false };
+}
+
+function cmd_re_enable_automation() {
+    var song = new LiveAPI("live_set");
+    try {
+        song.call("re_enable_automation");
+    } catch (e) {
+        throw "re_enable_automation is not available";
+    }
+    return { re_enabled: true };
+}
+
+function cmd_set_count_in_duration(params) {
+    var bars = Math.floor(Number(param(params, "bars", 1)));
+    var song = new LiveAPI("live_set");
+    try {
+        song.set("count_in_duration", bars);
+    } catch (e) {
+        throw "count_in_duration is not available";
+    }
+    return { count_in_duration: apiGetOptionalNum("live_set", "count_in_duration") };
+}
+
+function cmd_set_exclusive_arm(params) {
+    var on = param(params, "on", true);
+    var song = new LiveAPI("live_set");
+    try {
+        song.set("exclusive_arm", on ? 1 : 0);
+    } catch (e) {
+        throw "exclusive_arm is not available";
+    }
+    return { exclusive_arm: apiGetOptionalNum("live_set", "exclusive_arm") ? true : false };
+}
+
+function cmd_set_punch(params) {
+    var punchIn = param(params, "punch_in", null);
+    var punchOut = param(params, "punch_out", null);
+    if (punchIn === null && punchOut === null) throw "set_punch requires punch_in and/or punch_out";
+    var song = new LiveAPI("live_set");
+    try {
+        if (punchIn !== null) song.set("punch_in", punchIn ? 1 : 0);
+        if (punchOut !== null) song.set("punch_out", punchOut ? 1 : 0);
+    } catch (e) {
+        throw "punch_in/punch_out are not available";
+    }
+    return {
+        punch_in: apiGetOptionalNum("live_set", "punch_in") ? true : false,
+        punch_out: apiGetOptionalNum("live_set", "punch_out") ? true : false
+    };
+}
+
+function cmd_set_song_scale(params) {
+    var scaleName = param(params, "scale_name", null);
+    var rootNote = param(params, "root_note", null);
+    if (scaleName === null && rootNote === null) throw "set_song_scale requires scale_name and/or root_note";
+    var song = new LiveAPI("live_set");
+    if (scaleName !== null) {
+        try {
+            song.set("scale_name", String(scaleName));
+        } catch (e) {
+            throw "scale_name is not available";
+        }
+    }
+    if (rootNote !== null) {
+        try {
+            song.set("root_note", Math.floor(Number(rootNote)));
+        } catch (e) {
+            throw "root_note is not available";
+        }
+    }
+    var result = {};
+    var name = apiGetOptionalStr("live_set", "scale_name");
+    var root = apiGetOptionalNum("live_set", "root_note");
+    if (name !== null) result.scale_name = name;
+    if (root !== null) result.root_note = root;
+    return result;
+}
+
+function cmd_set_track_color(params) {
+    var trackIndex = param(params, "track_index", 0);
+    var trackPath = getTrackPath(trackIndex);
+    var track = new LiveAPI(trackPath);
+    if (!track.id || track.id === "0") throw "Track index out of range";
+    return setColorFields(track, trackPath, params, "track");
+}
+
+function cmd_set_scene_color(params) {
+    var sceneIndex = param(params, "scene_index", 0);
+    var scenePath = "live_set scenes " + sceneIndex;
+    var scene = new LiveAPI(scenePath);
+    if (!scene.id || scene.id === "0") throw "Scene index out of range";
+    return setColorFields(scene, scenePath, params, "scene");
+}
+
+function cmd_duplicate_scene(params) {
+    var index = param(params, "scene_index", param(params, "index", 0));
+    var song = new LiveAPI("live_set");
+    try {
+        song.call("duplicate_scene", index);
+    } catch (e) {
+        throw "duplicate_scene failed";
+    }
+    return {
+        duplicated: true,
+        scene_index: index,
+        scene_count: apiGetCount("live_set", "scenes")
+    };
+}
+
+function cmd_set_scene_tempo(params) {
+    var sceneIndex = param(params, "scene_index", 0);
+    var tempo = Number(param(params, "tempo", 0));
+    var scenePath = "live_set scenes " + sceneIndex;
+    var scene = new LiveAPI(scenePath);
+    if (!scene.id || scene.id === "0") throw "Scene index out of range";
+    try {
+        scene.set("tempo", tempo);
+    } catch (e) {
+        throw "scene.tempo is not available";
+    }
+    try {
+        scene.set("tempo_enabled", tempo > 0 ? 1 : 0);
+    } catch (e2) {}
+    return {
+        scene_index: sceneIndex,
+        tempo: apiGetOptionalNum(scenePath, "tempo")
+    };
+}
+
+function cmd_set_scene_signature(params) {
+    var sceneIndex = param(params, "scene_index", 0);
+    var numerator = param(params, "numerator", null);
+    var denominator = param(params, "denominator", null);
+    if (numerator === null && denominator === null) throw "set_scene_signature requires numerator and/or denominator";
+    var scenePath = "live_set scenes " + sceneIndex;
+    var scene = new LiveAPI(scenePath);
+    if (!scene.id || scene.id === "0") throw "Scene index out of range";
+    function setSig(prop, value) {
+        try {
+            scene.set(prop, Math.floor(Number(value)));
+            return true;
+        } catch (e) {
+            return false;
+        }
+    }
+    if (numerator !== null) {
+        if (!setSig("time_signature_numerator", numerator) && !setSig("signature_numerator", numerator)) {
+            throw "scene time signature numerator is not available";
+        }
+    }
+    if (denominator !== null) {
+        if (!setSig("time_signature_denominator", denominator) && !setSig("signature_denominator", denominator)) {
+            throw "scene time signature denominator is not available";
+        }
+    }
+    try {
+        scene.set("time_signature_enabled", 1);
+    } catch (e3) {}
+    var result = { scene_index: sceneIndex };
+    var n = apiGetOptionalNum(scenePath, "time_signature_numerator");
+    if (n === null) n = apiGetOptionalNum(scenePath, "signature_numerator");
+    var d = apiGetOptionalNum(scenePath, "time_signature_denominator");
+    if (d === null) d = apiGetOptionalNum(scenePath, "signature_denominator");
+    if (n !== null) result.numerator = n;
+    if (d !== null) result.denominator = d;
+    return result;
+}
+
+function cmd_set_cue_volume(params) {
+    var volume = Number(param(params, "volume", 0.85));
+    var actual = setNormalizedMixerParam("live_set master_track mixer_device cue_volume", volume, "Cue volume");
+    return {
+        cue_volume: actual,
+        normalized_value: volume
+    };
+}
+
+// ─── Shared high-impact Live 12 API commands ───
+
+function liveValue(raw) {
+    if (raw instanceof Array) return raw.length ? raw[0] : null;
+    return raw;
+}
+
+function integerParam(value, label, minimum) {
+    if (value === null || value === undefined || value === "") throw label + " is required";
+    var number = Number(value);
+    if (!isFinite(number) || Math.floor(number) !== number ||
+        (minimum !== undefined && number < minimum)) {
+        throw label + " must be an integer" + (minimum !== undefined ? " >= " + minimum : "");
+    }
+    return number;
+}
+
+function requireLiveVersion(minMajor, minMinor, message) {
+    var parts = liveVersion().split(".");
+    var major = Number(parts[0]);
+    var minor = Number(parts[1]);
+    if (!isFinite(major) || !isFinite(minor) || major < minMajor ||
+        (major === minMajor && minor < minMinor)) {
+        throw message + " (running Live " + parts.join(".") + ")";
+    }
+}
+
+function cmd_get_application_info() {
+    var app = new LiveAPI("live_app");
+    var major = Number(liveValue(app.call("get_major_version")));
+    var minor = Number(liveValue(app.call("get_minor_version")));
+    var bugfix = Number(liveValue(app.call("get_bugfix_version")));
+    var version;
+    try {
+        version = String(liveValue(app.call("get_version_string")));
+    } catch (e) {
+        version = major + "." + minor + "." + bugfix;
+    }
+    var result = {
+        major_version: major,
+        minor_version: minor,
+        bugfix_version: bugfix,
+        version: version
+    };
+    var dialogMessage = apiGetOptionalStr("live_app", "current_dialog_message");
+    var buttonCount = apiGetOptionalNum("live_app", "current_dialog_button_count");
+    var openCount = apiGetOptionalNum("live_app", "open_dialog_count");
+    if (dialogMessage !== null) result.current_dialog_message = dialogMessage;
+    if (buttonCount !== null) result.current_dialog_button_count = buttonCount;
+    if (openCount !== null) result.open_dialog_count = openCount;
+    return result;
+}
+
+function cmd_press_current_dialog_button(params) {
+    var index = integerParam(param(params, "index", null), "index", 0);
+    var buttonCount = apiGetOptionalNum("live_app", "current_dialog_button_count");
+    if (buttonCount === null) {
+        throw "current dialog button count is unavailable; press_current_dialog_button is not supported by this Live version";
+    }
+    buttonCount = Math.floor(buttonCount);
+    if (index >= buttonCount) {
+        throw "Dialog button index out of range: " + index + " (button count " + buttonCount + ")";
+    }
+    var app = new LiveAPI("live_app");
+    try {
+        app.call("press_current_dialog_button", index);
+    } catch (e) {
+        throw "press_current_dialog_button failed: " + e;
+    }
+    return { pressed: true, index: index };
+}
+
+function rackDevice(params) {
+    var trackIndex = param(params, "track_index", 0);
+    var deviceIndex = param(params, "device_index", 0);
+    var path = getTrackPath(trackIndex) + " devices " + deviceIndex;
+    var device = new LiveAPI(path);
+    if (!device.id || device.id === "0") throw "Device index out of range";
+    return {
+        track_index: trackIndex,
+        device_index: deviceIndex,
+        path: path,
+        api: device
+    };
+}
+
+function rackMacroState(info) {
+    var path = info.path;
+    var device = info.api;
+    var mappedList = null;
+    try {
+        mappedList = asBoolList(device.get("macros_mapped"));
+    } catch (e) {
+        mappedList = null;
+    }
+    var hasMappings = apiGetOptionalNum(path, "has_macro_mappings");
+    var visible = apiGetOptionalNum(path, "visible_macro_count");
+    var variationCount = apiGetOptionalNum(path, "variation_count");
+    var selectedVariation = apiGetOptionalNum(path, "selected_variation_index");
+    var parameterCount = apiGetOptionalCount(path, "parameters");
+    var macros = [];
+    for (var i = 0; i < parameterCount; i++) {
+        var parameterPath = path + " parameters " + i;
+        var name = apiGetOptionalStr(parameterPath, "name") || "";
+        var originalName = apiGetOptionalStr(parameterPath, "original_name");
+        var macroName = originalName || name;
+        if (String(macroName).indexOf("Macro") !== 0) continue;
+        var macroNumber = macroNumberFromName(macroName);
+        if (mappedList) {
+            if (macroNumber === null || !mappedList[macroNumber - 1]) continue;
+        } else if (visible !== null && macroNumber !== null && macroNumber > visible) {
+            continue;
+        }
+        macros.push({
+            index: i,
+            name: name,
+            original_name: originalName,
+            value: apiGetOptionalNum(parameterPath, "value")
+        });
+    }
+    var result = {
+        track_index: info.track_index,
+        device_index: info.device_index,
+        macros: macros,
+        visible_macro_count: visible,
+        variation_count: variationCount,
+        selected_variation_index: selectedVariation
+    };
+    if (mappedList) {
+        result.macros_mapped = mappedList;
+        result.mapped_macros = macros;
+    }
+    if (hasMappings !== null) result.has_macro_mappings = hasMappings ? true : false;
+    return result;
+}
+
+function rackMutation(params, method, operation) {
+    var info = rackDevice(params);
+    try {
+        info.api.call(method);
+    } catch (e) {
+        throw operation + " failed (requires a RackDevice and Live 11+): " + e;
+    }
+    var result = rackMacroState(info);
+    result.operation = operation;
+    return result;
+}
+
+function cmd_add_macro(params) {
+    return rackMutation(params, "add_macro", "add_macro");
+}
+
+function cmd_remove_macro(params) {
+    return rackMutation(params, "remove_macro", "remove_macro");
+}
+
+function cmd_randomize_macros(params) {
+    return rackMutation(params, "randomize_macros", "randomize_macros");
+}
+
+function cmd_store_macro_variation(params) {
+    return rackMutation(params, "store_variation", "store_macro_variation");
+}
+
+function variationMutation(params, method, operation) {
+    var info = rackDevice(params);
+    var variationIndex = integerParam(param(params, "variation_index", null), "variation_index", 0);
+    var count = apiGetOptionalNum(info.path, "variation_count");
+    if (count !== null && variationIndex >= count) {
+        throw "Variation index out of range: " + variationIndex + " (variation count " + count + ")";
+    }
+    try {
+        info.api.set("selected_variation_index", variationIndex);
+        info.api.call(method);
+    } catch (e) {
+        throw operation + " failed (requires a RackDevice and Live 11+): " + e;
+    }
+    var result = rackMacroState(info);
+    result.operation = operation;
+    result.variation_index = variationIndex;
+    return result;
+}
+
+function cmd_recall_macro_variation(params) {
+    return variationMutation(params, "recall_selected_variation", "recall_macro_variation");
+}
+
+function cmd_delete_macro_variation(params) {
+    return variationMutation(params, "delete_selected_variation", "delete_macro_variation");
+}
+
+function cmd_duplicate_clip_to_arrangement(params) {
+    var trackIndex = param(params, "track_index", 0);
+    var clipIndex = integerParam(param(params, "clip_index", 0), "clip_index", 0);
+    var destinationValue = param(params, "destination_time", null);
+    if (destinationValue === null || destinationValue === undefined) throw "destination_time is required";
+    var destinationTime = Number(destinationValue);
+    if (!isFinite(destinationTime) || destinationTime < 0) throw "destination_time must be a finite number >= 0";
+
+    var trackPath = getTrackPath(trackIndex);
+    var track = new LiveAPI(trackPath);
+    if (!track.id || track.id === "0") throw "Track index out of range";
+    var slotPath = trackPath + " clip_slots " + clipIndex;
+    if (!apiGetNum(slotPath, "has_clip")) throw "No clip in source slot " + clipIndex;
+    var clip = new LiveAPI(slotPath + " clip");
+    var before = apiGetOptionalCount(trackPath, "arrangement_clips");
+    try {
+        track.call("duplicate_clip_to_arrangement", "id " + clip.id, destinationTime);
+    } catch (e) {
+        throw "duplicate_clip_to_arrangement failed (Track.duplicate_clip_to_arrangement requires Live 11+): " + e;
+    }
+    var after = apiGetOptionalCount(trackPath, "arrangement_clips");
+    return {
+        track_index: trackIndex,
+        clip_index: clipIndex,
+        destination_time: destinationTime,
+        arrangement_clip_count_before: before,
+        arrangement_clip_count: after,
+        duplicated: true
+    };
+}
+
+function cmd_insert_device(params) {
+    requireLiveVersion(12, 3,
+        "insert_device requires Live 12.3+ and a native Live device; VST/AU and Max devices are not supported");
+    var trackIndex = param(params, "track_index", 0);
+    var deviceName = String(param(params, "device_name", ""));
+    var targetValue = param(params, "target_index", null);
+    if (!deviceName) throw "device_name is required";
+    var targetIndex = targetValue === null || targetValue === undefined
+        ? null : integerParam(targetValue, "target_index", 0);
+    var trackPath = getTrackPath(trackIndex);
+    var track = new LiveAPI(trackPath);
+    if (!track.id || track.id === "0") throw "Track index out of range";
+    var before = apiGetOptionalCount(trackPath, "devices");
+    try {
+        if (targetIndex === null) track.call("insert_device", deviceName);
+        else track.call("insert_device", deviceName, targetIndex);
+    } catch (e) {
+        throw "insert_device failed (Live 12.3+ native devices only; VST/AU and Max devices require browser/.adg workflows): " + e;
+    }
+    var after = apiGetOptionalCount(trackPath, "devices");
+    return {
+        track_index: trackIndex,
+        device_name: deviceName,
+        target_index: targetIndex,
+        device_count_before: before,
+        device_count: after,
+        inserted: true
+    };
+}
+
+function simplerDevice(params) {
+    var trackIndex = param(params, "track_index", 0);
+    var deviceIndex = integerParam(param(params, "device_index", 0), "device_index", 0);
+    var path = getTrackPath(trackIndex) + " devices " + deviceIndex;
+    var device = new LiveAPI(path);
+    if (!device.id || device.id === "0") throw "Device index out of range";
+    var className = apiGetOptionalStr(path, "class_name") || "";
+    var displayName = apiGetOptionalStr(path, "class_display_name") || "";
+    if (String(className).toLowerCase().indexOf("simpler") < 0 &&
+        String(displayName).toLowerCase().indexOf("simpler") < 0) {
+        throw "Device is not Simpler";
+    }
+    var samplePath = path + " sample";
+    var sample = new LiveAPI(samplePath);
+    if (!sample.id || sample.id === "0") throw "Simpler has no accessible sample";
+    return {
+        track_index: trackIndex,
+        device_index: deviceIndex,
+        device_path: path,
+        device: device,
+        sample_path: samplePath,
+        sample: sample
+    };
+}
+
+function sampleInfo(info) {
+    return {
+        track_index: info.track_index,
+        device_index: info.device_index,
+        file_path: apiGetOptionalStr(info.sample_path, "file_path"),
+        start_marker: apiGetOptionalNum(info.sample_path, "start_marker") === null
+            ? null : Math.floor(apiGetOptionalNum(info.sample_path, "start_marker")),
+        end_marker: apiGetOptionalNum(info.sample_path, "end_marker") === null
+            ? null : Math.floor(apiGetOptionalNum(info.sample_path, "end_marker"))
+    };
+}
+
+function cmd_get_simpler_sample(params) {
+    return sampleInfo(simplerDevice(params));
+}
+
+function cmd_set_simpler_sample_window(params) {
+    var info = simplerDevice(params);
+    var startValue = param(params, "start_marker", null);
+    var endValue = param(params, "end_marker", null);
+    if (startValue === null && endValue === null) {
+        throw "set_simpler_sample_window requires start_marker and/or end_marker";
+    }
+    try {
+        if (startValue !== null) info.sample.set("start_marker", integerParam(startValue, "start_marker", 0));
+        if (endValue !== null) info.sample.set("end_marker", integerParam(endValue, "end_marker", 0));
+    } catch (e) {
+        throw "set_simpler_sample_window failed (sample markers are integer sample frames): " + e;
+    }
+    return sampleInfo(info);
+}
+
+function cmd_replace_simpler_sample(params) {
+    requireLiveVersion(12, 4, "replace_simpler_sample requires Live 12.4+ and SimplerDevice.replace_sample");
+    var info = simplerDevice(params);
+    var filePath = String(param(params, "file_path", ""));
+    if (!filePath) throw "file_path is required";
+    try {
+        info.device.call("replace_sample", filePath);
+    } catch (e) {
+        throw "replace_simpler_sample failed (SimplerDevice.replace_sample requires Live 12.4+): " + e;
+    }
+    return sampleInfo(info);
+}
+
+function mergeNoteDictionary(base, patch) {
+    var merged = {};
+    var key;
+    for (key in base) {
+        if (base.hasOwnProperty(key)) merged[key] = base[key];
+    }
+    for (key in patch) {
+        if (patch.hasOwnProperty(key)) merged[key] = patch[key];
+    }
+    return merged;
+}
+
+function cmd_apply_note_modifications(params) {
+    var notes = param(params, "notes", null);
+    if (!Array.isArray(notes)) throw "notes must be an array of note dictionaries";
+    var clipPath = sessionClipPath(params);
+    var clip = new LiveAPI(clipPath);
+    if (!apiGetNum(clipPath, "is_midi_clip")) throw "Not a MIDI clip";
+    if (!notes.length) return { track_index: param(params, "track_index", 0), modified_note_count: 0 };
+
+    var current = readAllNotes(clip, apiGetNum(clipPath, "length"));
+    var byId = {};
+    for (var i = 0; i < current.length; i++) {
+        if (current[i].note_id === undefined || current[i].note_id === null) {
+            throw "Note IDs are unavailable; apply_note_modifications requires Live 11+ get_notes_extended data";
+        }
+        byId[String(current[i].note_id)] = current[i];
+    }
+
+    var mergedNotes = [];
+    var mergedById = {};
+    for (i = 0; i < notes.length; i++) {
+        var patch = notes[i];
+        if (!patch || typeof patch !== "object") throw "Each note modification must be a dictionary";
+        var noteId = integerParam(patch.note_id, "note_id", 0);
+        var key = String(noteId);
+        if (!byId.hasOwnProperty(key)) throw "Note ID not found in clip: " + noteId;
+        var merged = mergeNoteDictionary(byId[key], patch);
+        merged.note_id = noteId;
+        if (mergedById.hasOwnProperty(key)) mergedNotes[mergedById[key]] = merged;
+        else {
+            mergedById[key] = mergedNotes.length;
+            mergedNotes.push(merged);
+        }
+    }
+
+    try {
+        clip.call("apply_note_modifications", { notes: mergedNotes });
+    } catch (e) {
+        throw "apply_note_modifications failed (requires a MIDI clip and Live 11+): " + e;
+    }
+    var result = {
+        track_index: param(params, "track_index", 0),
+        clip_index: param(params, "clip_index", 0),
+        modified_note_count: mergedNotes.length,
+        note_count: current.length,
+        applied: true
+    };
+    var arrangementIndex = param(params, "arrangement_clip_index", null);
+    if (arrangementIndex !== null && arrangementIndex !== undefined) {
+        result.arrangement_clip_index = arrangementIndex;
+    }
+    return result;
 }

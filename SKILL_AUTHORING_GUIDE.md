@@ -57,10 +57,10 @@ Not every skill needs all sections. A bass skill doesn't need pattern diagrams. 
 - Create MIDI tracks, clips, add notes
 - Load Operator, Wavetable, Analog, Simpler, Drum Rack
 - Load any effect (EQ8, Compressor, Reverb, Saturator, Auto Filter, etc.)
-- Load MIDI effects (Chord, Scale, Arpeggiator) via `get_browser_items_at_path("midi_effects")` then `load_instrument_or_effect`, then `move_device` to sit before the instrument (Remote Script)
-- Set device parameters by index (normalized 0.0-1.0)
+- Load MIDI effects (Chord, Scale, Arpeggiator) via `get_browser_items_at_path("midi_effects")` then `load_instrument_or_effect` (Live already inserts MIDI FX before the instrument). Use `move_device` only to reorder MIDI effects among themselves — Live will not place an instrument in front of a MIDI effect (Remote Script)
+- Set device parameters by index or name (normalized 0.0-1.0). For VSTs, only Configure-panel knobs exist; `get_device_parameters` includes inferred groups (e.g. Oscillator A, Filter 1)
 - Set track volume, panning, send levels
-- Write clip automation envelopes (session or arrangement clip)
+- Write clip automation envelopes on **session** clips (`set_clip_envelope`). Arrangement clip envelopes are not in the public LOM (track-level automation is GUI-only)
 - Apply an existing Groove Pool entry (`get_groove_pool` / `apply_groove`)
 - List rack chains; `insert_rack_chain` on Live 12.3+
 - Set tempo, time signature

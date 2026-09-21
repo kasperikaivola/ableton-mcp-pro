@@ -126,41 +126,59 @@ The working pattern passes JSON strings directly as Max messages:
 
 ### Location
 
-The Remote Script must be installed at:
+Preferred install (Windows Live 12 Suite):
+```
+C:\ProgramData\Ableton\Live 12 Suite\Resources\MIDI Remote Scripts\AbletonMCP\
+```
+
+macOS:
 ```
 /Applications/Ableton Live 12 Suite.app/Contents/App-Resources/MIDI Remote Scripts/AbletonMCP/
 ```
 
-The directory contains `__init__.py` (the script) and a `__pycache__/` directory (compiled bytecode).
+The directory contains `__init__.py` (the script) and a `__pycache__/` directory (compiled bytecode). User Library `Remote Scripts/AbletonMCP` is a second copy on some Windows machines.
 
 ### Updating the Script
 
-This is the most error-prone part of the workflow. Follow these steps exactly:
+Use the repo scripts (they delete the destination, copy, and clear `__pycache__`):
 
-1. **Delete the old file first, then copy:**
-   ```bash
-   rm "/Applications/Ableton Live 12 Suite.app/Contents/App-Resources/MIDI Remote Scripts/AbletonMCP/__init__.py"
-   cp AbletonMCP_Remote_Script/__init__.py "/Applications/Ableton Live 12 Suite.app/Contents/App-Resources/MIDI Remote Scripts/AbletonMCP/__init__.py"
-   ```
-   macOS app bundle protection can cause `cp` to silently fail (it reports success but doesn't actually overwrite). Always `rm` first.
+```bash
+python tools/deploy_remote_script.py
+python tools/launch_ableton.py --reload
+```
 
-2. **Verify the copy worked:**
-   ```bash
-   wc -l "/Applications/Ableton Live 12 Suite.app/Contents/App-Resources/MIDI Remote Scripts/AbletonMCP/__init__.py"
-   ```
-   Compare line count with your source file.
+`launch_ableton.py` without `--reload` starts Live only if it is not already running (no second instance). Toggling the Control Surface in Preferences does NOT reliably reload the script; a full quit and relaunch is required.
 
-3. **Delete the bytecode cache:**
-   ```bash
-   rm -rf "/Applications/Ableton Live 12 Suite.app/Contents/App-Resources/MIDI Remote Scripts/AbletonMCP/__pycache__"
-   ```
-   Ableton caches compiled `.pyc` files. If you don't clear this, it will keep running the old version.
+Manual fallback (macOS app bundles can silently no-op a bare `cp`; always `rm` first):
 
-4. **Fully restart Ableton Live.** Toggling the Control Surface in Preferences (Link/Tempo/MIDI → set to None → set back to AbletonMCP) does NOT reliably reload the script. A full quit and relaunch is required.
+```bash
+rm "/Applications/Ableton Live 12 Suite.app/Contents/App-Resources/MIDI Remote Scripts/AbletonMCP/__init__.py"
+cp AbletonMCP_Remote_Script/__init__.py "/Applications/Ableton Live 12 Suite.app/Contents/App-Resources/MIDI Remote Scripts/AbletonMCP/__init__.py"
+rm -rf "/Applications/Ableton Live 12 Suite.app/Contents/App-Resources/MIDI Remote Scripts/AbletonMCP/__pycache__"
+```
 
-5. **Restart the MCP server** after Ableton is back up and the Control Surface is active.
+Restart the MCP server after Ableton is back up and the Control Surface is active.
 
 ## Adding New Commands
+
+### High-impact LOM batch contract
+
+Keep these public contracts aligned across the MCP server and Remote Script:
+
+- Rack devices support `add_macro`, `remove_macro`, `randomize_macros`, `store_macro_variation`, `recall_macro_variation`, and `delete_macro_variation`. `get_rack_macros` includes `visible_macro_count`, `variation_count`, `selected_variation_index`, and mapped macros. New macro mappings remain GUI-only.
+- `duplicate_clip_to_arrangement` copies a session clip, including envelopes, to `destination_time` on the same track.
+- `insert_device` loads native Live devices by their UI name and requires Live 12.3+. Plug-ins and Max devices continue to use browser / `.adg` workflows.
+- `get_simpler_sample` and `set_simpler_sample_window` expose integer sample-frame positions. `replace_simpler_sample` requires Live 12.4+.
+- `get_application_info` reads application/version and dialog state. `press_current_dialog_button` presses an already available dialog button, but depends on the Remote Script socket already being bound; it cannot dismiss a startup dialog that prevents port 9877 from opening.
+- `apply_note_modifications` merges partial patches by `note_id` and edits notes in place. Omitted fields remain unchanged; supported velocity, probability, and MPE fields may be patched.
+
+The reversible live smoke harness covers the application query, a disposable MIDI track, native Operator insertion, note patch/readback, and session-to-arrangement duplication:
+
+```bash
+uv run python tools/_verify_lom_batch_live.py
+```
+
+Rack checks can be opted into with `--check-rack`. A Simpler sample check requires an explicit disposable sample path with `--sample-path`; neither option touches user tracks. The harness never presses dialog buttons automatically.
 
 ### Threading Model
 
@@ -263,7 +281,21 @@ A typical master chain for techno: Glue Compressor → EQ Eight → Limiter. Loa
 
 ## Device Parameter Control
 
-Parameters are accessed by track index → device index → parameter index.
+Parameters are accessed by track index → device index → parameter index **or name**.
+
+### Plug-ins (Serum 2 and other VSTs with a Configure list)
+
+`Device.parameters` is Live's Configure panel, not the plugin GUI. Live does **not**
+expose folders/groups for those sliders and cannot auto-add every host-automatable
+knob (hard cap ~128). Different instances can map different subsets — **never cache
+parameter indices**. Look up by `parameter_name`. `get_device_parameters` infers
+groups from names, accepts `query`, and for Serum includes `coverage.present` /
+`coverage.absent` for common sound-design knobs. `batch_set_device_parameters`
+sets whatever names exist and lists the rest in `skipped`. After Configure, save
+**Default Configuration** or an `.adg` rack so new instances keep the list.
+
+`set_plugin_preset` is the VST host program bank (`selected_preset_index`), not
+Serum `.serumpreset` files. VST3 banks are often empty.
 
 ### Normalized Values
 

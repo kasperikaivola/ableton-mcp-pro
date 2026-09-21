@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "AbletonMCP": {
+      "command": "H:\\gitprojects\\ableton-mcp-pro\\.venv\\Scripts\\python.exe",
+      "args": [
+        "H:\\gitprojects\\ableton-mcp-pro\\MCP_Server\\server.py"
+      ]
+    }
+  }
+}
+

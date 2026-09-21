@@ -106,16 +106,16 @@ class AbletonConnection:
             "create_midi_track", "create_audio_track", "set_track_name",
             "create_clip", "create_audio_clip", "create_arrangement_audio_clip",
             "create_arrangement_midi_clip", "delete_arrangement_clip",
-            "add_notes_to_clip", "set_clip_name",
+            "add_notes_to_clip", "apply_note_modifications", "set_clip_name",
             "set_tempo", "fire_clip", "stop_clip", "set_device_parameter",
-            "batch_set_device_parameters",
+            "batch_set_device_parameters", "set_plugin_preset",
             "start_playback", "stop_playback", "load_instrument_or_effect",
             "load_browser_item", "set_track_volume", "set_track_panning",
             "play_arrangement", "fire_scene", "set_song_time", "set_record_mode",
             "set_arrangement_overdub", "set_back_to_arranger",
             "set_arrangement_loop",
             "set_track_mute", "set_track_solo",
-            "delete_clip", "duplicate_clip",
+            "delete_clip", "duplicate_clip", "duplicate_clip_to_arrangement",
             "create_scene", "delete_scene", "set_scene_name",
             "delete_track", "record_arrangement",
             "delete_device", "duplicate_track", "set_clip_loop",
@@ -129,11 +129,24 @@ class AbletonConnection:
             "set_device_enabled", "create_return_track", "delete_return_track",
             "stop_all_clips", "set_clip_gain", "set_clip_pitch",
             "set_clip_warping", "set_clip_warp_mode", "resample_master",
-            "move_device", "set_groove_amount", "apply_groove", "clear_clip_groove",
+            "move_device", "insert_device", "set_groove_amount", "apply_groove", "clear_clip_groove",
             "set_device_sidechain", "insert_rack_chain", "set_chain_mixer",
+            "add_macro", "remove_macro", "randomize_macros",
+            "store_macro_variation", "recall_macro_variation", "delete_macro_variation",
+            "set_simpler_sample_window", "replace_simpler_sample",
             "capture_and_insert_scene", "crop_clip", "set_clip_launch",
             "toggle_cue", "jump_to_cue", "set_crossfader", "set_crossfade_assign",
-            "show_view", "add_warp_marker"
+            "show_view", "add_warp_marker",
+            "set_clip_color", "set_clip_muted", "set_clip_markers",
+            "set_clip_signature", "quantize_pitch", "set_clip_ram_mode",
+            "move_warp_marker", "delete_warp_marker",
+            "tap_tempo", "jump_by", "continue_playing",
+            "set_session_record", "set_session_automation_record",
+            "re_enable_automation", "set_count_in_duration",
+            "set_exclusive_arm", "set_punch", "set_song_scale",
+            "set_track_color", "set_scene_color", "duplicate_scene",
+            "set_scene_tempo", "set_scene_signature", "set_cue_volume",
+            "press_current_dialog_button"
         ]
         
         try:
@@ -306,6 +319,34 @@ def get_session_info(ctx: Context) -> str:
     except Exception as e:
         logger.error(f"Error getting session info from Ableton: {str(e)}")
         return f"Error getting session info: {str(e)}"
+
+@mcp.tool()
+def get_application_info(ctx: Context) -> str:
+    """Read Live's version and current dialog state via the Remote Script backend.
+
+    Dialog fields are returned when supported by the installed Live version.
+    """
+    try:
+        result = get_ableton_connection().send_command("get_application_info")
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error getting application info: {str(e)}")
+        return f"Error getting application info: {str(e)}"
+
+@mcp.tool()
+def press_current_dialog_button(ctx: Context, index: int) -> str:
+    """Press a zero-based button in Live's current dialog via the Remote Script backend.
+
+    The backend validates the index and reports an error for an unavailable dialog or button.
+    """
+    try:
+        result = get_ableton_connection().send_command("press_current_dialog_button", {
+            "index": index
+        })
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error pressing current dialog button: {str(e)}")
+        return f"Error pressing current dialog button: {str(e)}"
 
 @mcp.tool()
 def get_track_info(ctx: Context, track_index: int) -> str:
@@ -584,79 +625,187 @@ def set_tempo(ctx: Context, tempo: float) -> str:
 
 
 @mcp.tool()
-def get_device_parameters(ctx: Context, track_index: int, device_index: int) -> str:
+def get_device_parameters(
+    ctx: Context,
+    track_index: int,
+    device_index: int,
+    query: str = None,
+    include_host_names: bool = False,
+) -> str:
     """
-    Get all parameters of a device on a track, including their current values and ranges.
+    Get parameters of a device on a track (Live devices and configured VST/AU knobs).
+
+    Values are normalized 0.0–1.0. For plug-ins (Serum 2, etc.) only
+    parameters in Live's Configure panel appear here (about 128 max). Live does
+    not group those sliders; this tool adds inferred `groups` from names
+    (Oscillator A/B/C, Filter 1, Envelope 1, Macros, …). Use query="Oscillator A"
+    or query="Filter 1" to fetch one group.
+
+    There is no LOM command to auto-add every host-automatable knob. After
+    Configure, save Default Configuration or an .adg rack so new instances keep
+    the list.
 
     Parameters:
-    - track_index: The index of the track containing the device
-    - device_index: The index of the device on the track
+    - track_index: Track index (-1 master, -2/-3 returns)
+    - device_index: Device index on the track
+    - query: Optional filter on name, display_value, or group (e.g. "Filter 1", "Macro")
+    - include_host_names: If true, also list PluginDevice.get_parameter_names()
+      (names the plug-in reports; still not settable until Configured)
     """
     try:
         ableton = get_ableton_connection()
-        result = ableton.send_command("get_device_parameters", {
+        payload = {
             "track_index": track_index,
-            "device_index": device_index
-        })
+            "device_index": device_index,
+            "include_host_names": include_host_names,
+        }
+        if query:
+            payload["query"] = query
+        result = ableton.send_command("get_device_parameters", payload)
         return json.dumps(result, indent=2)
     except Exception as e:
         logger.error(f"Error getting device parameters: {str(e)}")
         return f"Error getting device parameters: {str(e)}"
 
 @mcp.tool()
-def set_device_parameter(ctx: Context, track_index: int, device_index: int, parameter_index: int, value: float) -> str:
+def set_device_parameter(
+    ctx: Context,
+    track_index: int,
+    device_index: int,
+    value: float,
+    parameter_index: int = None,
+    parameter_name: str = None,
+) -> str:
     """
     Set a device parameter using a normalized value (0.0 to 1.0).
-    Use get_device_parameters first to see available parameters and their indices.
+    Prefer parameter_name for VSTs ("Filter 1 Freq", "Macro 1"). Do not reuse
+    parameter_index across instances — Configure mappings differ and indices move.
+    Missing names mean that knob is not in this instance's Configure panel.
 
     Parameters:
     - track_index: The index of the track containing the device
     - device_index: The index of the device on the track
-    - parameter_index: The index of the parameter to set
     - value: Normalized value between 0.0 and 1.0
+    - parameter_index: Optional parameter index (from get_device_parameters)
+    - parameter_name: Optional parameter name (case-insensitive; unique substring ok)
     """
     try:
         ableton = get_ableton_connection()
-        result = ableton.send_command("set_device_parameter", {
+        payload = {
             "track_index": track_index,
             "device_index": device_index,
-            "parameter_index": parameter_index,
-            "value": value
-        })
+            "value": value,
+        }
+        if parameter_index is not None:
+            payload["parameter_index"] = parameter_index
+        if parameter_name:
+            payload["parameter_name"] = parameter_name
+        result = ableton.send_command("set_device_parameter", payload)
         param_name = result.get("parameter_name", "unknown")
         actual_value = result.get("value", value)
-        return f"Set '{param_name}' to {actual_value} (normalized: {value})"
+        display = result.get("display_value")
+        extra = f" ({display})" if display not in (None, "") else ""
+        return f"Set '{param_name}' to {actual_value}{extra} (normalized: {value})"
     except Exception as e:
         logger.error(f"Error setting device parameter: {str(e)}")
         return f"Error setting device parameter: {str(e)}"
 
 @mcp.tool()
-def batch_set_device_parameters(ctx: Context, track_index: int, device_index: int, parameter_indices: List[int], values: List[float]) -> str:
+def batch_set_device_parameters(
+    ctx: Context,
+    track_index: int,
+    device_index: int,
+    values: List[float],
+    parameter_indices: List[int] = None,
+    parameter_names: List[str] = None,
+) -> str:
     """
     Set multiple device parameters at once using normalized values (0.0 to 1.0).
-    Use get_device_parameters first to see available parameters and their indices.
+    Pass parameter_names (preferred for VSTs) or parameter_indices.
 
     Parameters:
     - track_index: The index of the track containing the device
     - device_index: The index of the device on the track
-    - parameter_indices: List of parameter indices to set
-    - values: List of normalized values (0.0 to 1.0), must match length of parameter_indices
+    - values: List of normalized values (0.0 to 1.0)
+    - parameter_indices: Optional list of parameter indices
+    - parameter_names: Optional list of parameter names (same length as values)
     """
     try:
         ableton = get_ableton_connection()
-        result = ableton.send_command("batch_set_device_parameters", {
+        payload = {
             "track_index": track_index,
             "device_index": device_index,
-            "parameter_indices": parameter_indices,
-            "values": values
-        })
+            "values": values,
+        }
+        if parameter_indices is not None:
+            payload["parameter_indices"] = parameter_indices
+        if parameter_names is not None:
+            payload["parameter_names"] = parameter_names
+        result = ableton.send_command("batch_set_device_parameters", payload)
         updated_count = result.get("updated_count", 0)
+        skipped = result.get("skipped") or []
         params = result.get("parameters", [])
         details = ", ".join([f"{p['name']}={p['value']:.2f}" for p in params])
-        return f"Updated {updated_count} parameters: {details}"
+        msg = f"Updated {updated_count} parameters: {details}" if details else f"Updated {updated_count} parameters"
+        if skipped:
+            miss = ", ".join(str(s.get("name")) for s in skipped)
+            msg += f". Skipped {len(skipped)} not configured on this instance: {miss}"
+        return msg
     except Exception as e:
         logger.error(f"Error batch setting device parameters: {str(e)}")
         return f"Error batch setting device parameters: {str(e)}"
+
+@mcp.tool()
+def set_plugin_preset(
+    ctx: Context,
+    track_index: int,
+    device_index: int,
+    preset_index: int = None,
+    preset_name: str = None,
+) -> str:
+    """
+    Select a VST/AU host program-bank preset (PluginDevice.selected_preset_index).
+
+    This is NOT Serum .serumpreset files. VST3 instruments often expose an empty
+    bank. Use get_device_parameters to see `presets`.
+    """
+    try:
+        ableton = get_ableton_connection()
+        payload = {"track_index": track_index, "device_index": device_index}
+        if preset_index is not None:
+            payload["preset_index"] = preset_index
+        if preset_name:
+            payload["preset_name"] = preset_name
+        result = ableton.send_command("set_plugin_preset", payload)
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error setting plugin preset: {str(e)}")
+        return f"Error setting plugin preset: {str(e)}"
+
+@mcp.tool()
+def insert_device(
+    ctx: Context,
+    track_index: int,
+    device_name: str,
+    target_index: Optional[int] = None,
+) -> str:
+    """Insert a native Live device by name at an optional device index.
+
+    Requires Live 12.3+ and Track.insert_device. VST/AU and Max devices remain
+    browser/.adg workflows; track_index preserves -1 master and -2/-3 return semantics.
+    """
+    try:
+        params = {
+            "track_index": track_index,
+            "device_name": device_name,
+        }
+        if target_index is not None:
+            params["target_index"] = target_index
+        result = get_ableton_connection().send_command("insert_device", params)
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error inserting device: {str(e)}")
+        return f"Error inserting device: {str(e)}"
 
 @mcp.tool()
 def load_instrument_or_effect(ctx: Context, track_index: int, uri: str, clip_index: int = -1) -> str:
@@ -665,7 +814,9 @@ def load_instrument_or_effect(ctx: Context, track_index: int, uri: str, clip_ind
     Use track_index -1 for the master track.
 
     MIDI effects (Chord, Scale, Arpeggiator) load via get_browser_items_at_path("midi_effects")
-    then this tool; then move_device to place them before the instrument.
+    then this tool; Live inserts MIDI FX before the instrument. Use move_device only to
+    reorder MIDI effects among themselves or audio effects — Live cannot place an
+    instrument before MIDI effects.
 
     Parameters:
     - track_index: The index of the track to load on (-1 for master)
@@ -995,6 +1146,24 @@ def set_track_panning(ctx: Context, track_index: int, panning: float) -> str:
         return f"Error setting track panning: {str(e)}"
 
 @mcp.tool()
+def set_track_color(ctx: Context, track_index: int, color_index: int = None, color: int = None) -> str:
+    """Set a track's color. Provide color_index (Live palette) and/or color (RGB int).
+
+    track_index -1 = master, -2/-3 = returns.
+    """
+    try:
+        params = {"track_index": track_index}
+        if color_index is not None:
+            params["color_index"] = color_index
+        if color is not None:
+            params["color"] = color
+        result = get_ableton_connection().send_command("set_track_color", params)
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error setting track color: {str(e)}")
+        return f"Error setting track color: {str(e)}"
+
+@mcp.tool()
 def get_arrangement_info(ctx: Context) -> str:
     """Get current arrangement state including song time, record mode, loop settings, and transport status."""
     try:
@@ -1211,6 +1380,29 @@ def duplicate_clip(ctx: Context, track_index: int, clip_index: int, target_index
         return f"Error duplicating clip: {str(e)}"
 
 @mcp.tool()
+def duplicate_clip_to_arrangement(
+    ctx: Context,
+    track_index: int,
+    clip_index: int,
+    destination_time: float,
+) -> str:
+    """Duplicate a session clip slot to the same track's arrangement at a beat time.
+
+    Uses Track.duplicate_clip_to_arrangement so MIDI/audio content and envelopes are copied;
+    availability depends on the Live Remote Script backend exposing that API.
+    """
+    try:
+        result = get_ableton_connection().send_command("duplicate_clip_to_arrangement", {
+            "track_index": track_index,
+            "clip_index": clip_index,
+            "destination_time": destination_time,
+        })
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error duplicating clip to arrangement: {str(e)}")
+        return f"Error duplicating clip to arrangement: {str(e)}"
+
+@mcp.tool()
 def create_scene(ctx: Context, index: int = -1) -> str:
     """
     Create a new scene at the specified index.
@@ -1247,6 +1439,53 @@ def set_scene_name(ctx: Context, scene_index: int, name: str) -> str:
     except Exception as e:
         logger.error(f"Error setting scene name: {str(e)}")
         return f"Error setting scene name: {str(e)}"
+
+@mcp.tool()
+def set_scene_color(ctx: Context, scene_index: int, color_index: int = None, color: int = None) -> str:
+    """Set a scene's color. Provide color_index (Live palette) and/or color (RGB int)."""
+    try:
+        params = {"scene_index": scene_index}
+        if color_index is not None:
+            params["color_index"] = color_index
+        if color is not None:
+            params["color"] = color
+        result = get_ableton_connection().send_command("set_scene_color", params)
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error setting scene color: {str(e)}")
+        return f"Error setting scene color: {str(e)}"
+
+@mcp.tool()
+def duplicate_scene(ctx: Context, index: int) -> str:
+    """Duplicate a scene at the given index (song.duplicate_scene)."""
+    try:
+        result = get_ableton_connection().send_command("duplicate_scene", {"index": index})
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error duplicating scene: {str(e)}")
+        return f"Error duplicating scene: {str(e)}"
+
+@mcp.tool()
+def set_scene_tempo(ctx: Context, scene_index: int, tempo: float) -> str:
+    """Set a scene's tempo in BPM. 0 typically means follow the song tempo."""
+    try:
+        result = get_ableton_connection().send_command("set_scene_tempo", {
+            "scene_index": scene_index, "tempo": tempo})
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error setting scene tempo: {str(e)}")
+        return f"Error setting scene tempo: {str(e)}"
+
+@mcp.tool()
+def set_scene_signature(ctx: Context, scene_index: int, numerator: int, denominator: int) -> str:
+    """Set a scene's time signature (numerator/denominator, e.g. 4/4)."""
+    try:
+        result = get_ableton_connection().send_command("set_scene_signature", {
+            "scene_index": scene_index, "numerator": numerator, "denominator": denominator})
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error setting scene signature: {str(e)}")
+        return f"Error setting scene signature: {str(e)}"
 
 @mcp.tool()
 def create_audio_track(ctx: Context, index: int = -1) -> str:
@@ -1450,6 +1689,33 @@ def get_clip_notes(ctx: Context, track_index: int, clip_index: int) -> str:
         return f"Error getting clip notes: {str(e)}"
 
 @mcp.tool()
+def apply_note_modifications(
+    ctx: Context,
+    track_index: int,
+    clip_index: int,
+    notes: List[Dict[str, Any]],
+    arrangement_clip_index: Optional[int] = None,
+) -> str:
+    """Apply note patches to a session or arrangement MIDI clip.
+
+    Each note dict must include the note_id returned by get_*_notes; omitted fields
+    are preserved by the Remote Script backend. Times and duration are in beats.
+    """
+    try:
+        params = {
+            "track_index": track_index,
+            "clip_index": clip_index,
+            "notes": notes,
+        }
+        if arrangement_clip_index is not None:
+            params["arrangement_clip_index"] = arrangement_clip_index
+        result = get_ableton_connection().send_command("apply_note_modifications", params)
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error applying note modifications: {str(e)}")
+        return f"Error applying note modifications: {str(e)}"
+
+@mcp.tool()
 def set_track_arm(ctx: Context, track_index: int, arm: bool) -> str:
     """
     Arm or disarm a track for recording.
@@ -1532,7 +1798,12 @@ def set_metronome(ctx: Context, on: bool) -> str:
 @mcp.tool()
 def set_clip_envelope(ctx: Context, track_index: int, clip_index: int, device_index: int, parameter_index: int, points: List[dict], arrangement_clip_index: Optional[int] = None) -> str:
     """
-    Set automation envelope points for a parameter in a clip.
+    Set automation envelope points for a parameter in a session clip.
+
+    Session clip envelopes work. Arrangement clip envelopes are a LOM limit:
+    automation_envelope is session-only; arrangement automation is track-level and
+    not in the public LOM. arrangement_clip_index is still forwarded; the Remote
+    Script will error clearly on set.
 
     Parameters:
     - track_index: The index of the track
@@ -1564,7 +1835,11 @@ def set_clip_envelope(ctx: Context, track_index: int, clip_index: int, device_in
 @mcp.tool()
 def get_clip_envelope(ctx: Context, track_index: int, clip_index: int, device_index: int, parameter_index: int, arrangement_clip_index: Optional[int] = None) -> str:
     """
-    Read automation envelope data for a parameter in a clip.
+    Read automation envelope data for a parameter in a session clip.
+
+    Session clip envelopes work. Arrangement clip envelopes are a LOM limit:
+    automation_envelope is session-only; arrangement automation is track-level and
+    not in the public LOM. arrangement_clip_index is still forwarded.
 
     Parameters:
     - track_index: The index of the track
@@ -1837,6 +2112,68 @@ def get_clip_info(ctx: Context, track_index: int, clip_index: int = 0, arrangeme
         return f"Error getting clip info: {str(e)}"
 
 @mcp.tool()
+def get_simpler_sample(ctx: Context, track_index: int, device_index: int) -> str:
+    """Read a SimplerDevice's sample path and marker positions in integer sample frames.
+
+    Requires a Simpler device and a Remote Script backend exposing its Sample properties.
+    """
+    try:
+        result = get_ableton_connection().send_command("get_simpler_sample", {
+            "track_index": track_index,
+            "device_index": device_index,
+        })
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error getting Simpler sample: {str(e)}")
+        return f"Error getting Simpler sample: {str(e)}"
+
+@mcp.tool()
+def set_simpler_sample_window(
+    ctx: Context,
+    track_index: int,
+    device_index: int,
+    start_marker: Optional[int] = None,
+    end_marker: Optional[int] = None,
+) -> str:
+    """Set optional Simpler sample start/end markers, expressed as integer sample frames.
+
+    Requires a SimplerDevice and backend support for Sample.start_marker/end_marker;
+    omitted markers remain unchanged.
+    """
+    try:
+        params = {
+            "track_index": track_index,
+            "device_index": device_index,
+        }
+        if start_marker is not None:
+            params["start_marker"] = start_marker
+        if end_marker is not None:
+            params["end_marker"] = end_marker
+        result = get_ableton_connection().send_command("set_simpler_sample_window", params)
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error setting Simpler sample window: {str(e)}")
+        return f"Error setting Simpler sample window: {str(e)}"
+
+@mcp.tool()
+def replace_simpler_sample(ctx: Context, track_index: int, device_index: int, file_path: str) -> str:
+    """Replace a Simpler sample from an absolute file path.
+
+    Uses SimplerDevice.replace_sample and requires Live 12.4+; pre-12.4 builds
+    must return a clear backend error. The path is passed unchanged to Live.
+    """
+    try:
+        result = get_ableton_connection().send_command("replace_simpler_sample", {
+            "track_index": track_index,
+            "device_index": device_index,
+            "file_path": file_path,
+        })
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error replacing Simpler sample: {str(e)}")
+        return f"Error replacing Simpler sample: {str(e)}"
+
+@mcp.tool()
 def resample_master(ctx: Context, seconds: Optional[float] = None, name: str = "master rec", start_time: float = 0.0) -> str:
     """Record the main mix to an audio file: creates an audio track on Resampling, arms only it,
     plays the arrangement from start_time with record mode on until the last clip ends (or
@@ -1963,10 +2300,9 @@ def get_rack_chains(ctx: Context, track_index: int, device_index: int) -> str:
 
 @mcp.tool()
 def get_rack_macros(ctx: Context, track_index: int, device_index: int) -> str:
-    """Read a rack's macro names and values.
-
-    Creating or changing which parameters are mapped to macros is GUI-only; this tool
-    cannot add mappings. Use set_device_parameter to change an existing macro's value.
+    """Read rack macro state, including visible_macro_count, variation_count,
+    selected_variation_index, and mapped macros. Mapping new parameters remains
+    GUI-only; use set_device_parameter to change an existing mapped macro.
     """
     try:
         result = get_ableton_connection().send_command("get_rack_macros", {
@@ -1975,6 +2311,96 @@ def get_rack_macros(ctx: Context, track_index: int, device_index: int) -> str:
     except Exception as e:
         logger.error(f"Error getting rack macros: {str(e)}")
         return f"Error getting rack macros: {str(e)}"
+
+@mcp.tool()
+def add_macro(ctx: Context, track_index: int, device_index: int) -> str:
+    """Add one macro to a RackDevice using the Live Remote Script backend."""
+    try:
+        result = get_ableton_connection().send_command("add_macro", {
+            "track_index": track_index,
+            "device_index": device_index,
+        })
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error adding rack macro: {str(e)}")
+        return f"Error adding rack macro: {str(e)}"
+
+@mcp.tool()
+def remove_macro(ctx: Context, track_index: int, device_index: int) -> str:
+    """Remove one macro from a RackDevice using the Live Remote Script backend."""
+    try:
+        result = get_ableton_connection().send_command("remove_macro", {
+            "track_index": track_index,
+            "device_index": device_index,
+        })
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error removing rack macro: {str(e)}")
+        return f"Error removing rack macro: {str(e)}"
+
+@mcp.tool()
+def randomize_macros(ctx: Context, track_index: int, device_index: int) -> str:
+    """Randomize a RackDevice's macro values via the Live Remote Script backend."""
+    try:
+        result = get_ableton_connection().send_command("randomize_macros", {
+            "track_index": track_index,
+            "device_index": device_index,
+        })
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error randomizing rack macros: {str(e)}")
+        return f"Error randomizing rack macros: {str(e)}"
+
+@mcp.tool()
+def store_macro_variation(ctx: Context, track_index: int, device_index: int) -> str:
+    """Store the current RackDevice macro values as a variation."""
+    try:
+        result = get_ableton_connection().send_command("store_macro_variation", {
+            "track_index": track_index,
+            "device_index": device_index,
+        })
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error storing rack macro variation: {str(e)}")
+        return f"Error storing rack macro variation: {str(e)}"
+
+@mcp.tool()
+def recall_macro_variation(
+    ctx: Context,
+    track_index: int,
+    device_index: int,
+    variation_index: int,
+) -> str:
+    """Recall a RackDevice macro variation by its zero-based variation index."""
+    try:
+        result = get_ableton_connection().send_command("recall_macro_variation", {
+            "track_index": track_index,
+            "device_index": device_index,
+            "variation_index": variation_index,
+        })
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error recalling rack macro variation: {str(e)}")
+        return f"Error recalling rack macro variation: {str(e)}"
+
+@mcp.tool()
+def delete_macro_variation(
+    ctx: Context,
+    track_index: int,
+    device_index: int,
+    variation_index: int,
+) -> str:
+    """Delete a RackDevice macro variation by its zero-based variation index."""
+    try:
+        result = get_ableton_connection().send_command("delete_macro_variation", {
+            "track_index": track_index,
+            "device_index": device_index,
+            "variation_index": variation_index,
+        })
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error deleting rack macro variation: {str(e)}")
+        return f"Error deleting rack macro variation: {str(e)}"
 
 @mcp.tool()
 def get_cue_points(ctx: Context) -> str:
@@ -2006,8 +2432,9 @@ def get_warp_markers(ctx: Context, track_index: int, clip_index: int, arrangemen
 def move_device(ctx: Context, track_index: int, device_index: int, target_index: int) -> str:
     """Reorder a device on a track (0 = leftmost).
 
-    After loading a MIDI effect (Chord, Scale, Arpeggiator via get_browser_items_at_path
-    'midi_effects' then load_instrument_or_effect), call this to place it before the instrument.
+    Use this to reorder MIDI effects among themselves, or audio effects.
+    load_instrument_or_effect already inserts MIDI FX before the instrument.
+    Live cannot place an instrument before MIDI effects (Couldn't move device).
     """
     try:
         result = get_ableton_connection().send_command("move_device", {
@@ -2101,7 +2528,7 @@ def set_chain_mixer(ctx: Context, track_index: int, device_index: int, chain_ind
     Parameters:
     - mute, solo: chain mute/solo
     - volume: 0.0-1.0
-    - panning: -1.0 (left) to 1.0 (right)
+    - panning: 0.0-1.0 (left-right). Negative values in -1..1 are also accepted and converted.
     """
     try:
         params = {"track_index": track_index, "device_index": device_index, "chain_index": chain_index}
@@ -2133,6 +2560,7 @@ def capture_and_insert_scene(ctx: Context) -> str:
 def crop_clip(ctx: Context, track_index: int, clip_index: int, arrangement_clip_index: int = None) -> str:
     """Crop a clip to its loop start/end (clip.crop()).
 
+    After crop, loop and markers are reset to the cropped clip (0..length).
     Session slot, or an arrangement clip via arrangement_clip_index like add_notes_to_clip.
     """
     try:
@@ -2173,6 +2601,122 @@ def set_clip_launch(ctx: Context, track_index: int, clip_index: int, launch_mode
         return f"Error setting clip launch: {str(e)}"
 
 @mcp.tool()
+def set_clip_color(ctx: Context, track_index: int, clip_index: int, color_index: int = None,
+                   color: int = None, arrangement_clip_index: int = None) -> str:
+    """Set a clip's color. Provide color_index (Live palette) and/or color (RGB int).
+
+    Session slot, or an arrangement clip via arrangement_clip_index like add_notes_to_clip.
+    """
+    try:
+        params = {"track_index": track_index, "clip_index": clip_index}
+        if color_index is not None:
+            params["color_index"] = color_index
+        if color is not None:
+            params["color"] = color
+        if arrangement_clip_index is not None:
+            params["arrangement_clip_index"] = arrangement_clip_index
+        result = get_ableton_connection().send_command("set_clip_color", params)
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error setting clip color: {str(e)}")
+        return f"Error setting clip color: {str(e)}"
+
+@mcp.tool()
+def set_clip_muted(ctx: Context, track_index: int, clip_index: int, muted: bool,
+                   arrangement_clip_index: int = None) -> str:
+    """Mute or unmute a clip.
+
+    Session slot, or an arrangement clip via arrangement_clip_index like add_notes_to_clip.
+    """
+    try:
+        params = {"track_index": track_index, "clip_index": clip_index, "muted": muted}
+        if arrangement_clip_index is not None:
+            params["arrangement_clip_index"] = arrangement_clip_index
+        result = get_ableton_connection().send_command("set_clip_muted", params)
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error setting clip muted: {str(e)}")
+        return f"Error setting clip muted: {str(e)}"
+
+@mcp.tool()
+def set_clip_markers(ctx: Context, track_index: int, clip_index: int, start_marker: float = None,
+                     end_marker: float = None, arrangement_clip_index: int = None) -> str:
+    """Set clip start/end markers in beats (get_clip_info already reads them). Omit fields to leave unchanged.
+
+    Session slot, or an arrangement clip via arrangement_clip_index like add_notes_to_clip.
+    """
+    try:
+        params = {"track_index": track_index, "clip_index": clip_index}
+        if start_marker is not None:
+            params["start_marker"] = start_marker
+        if end_marker is not None:
+            params["end_marker"] = end_marker
+        if arrangement_clip_index is not None:
+            params["arrangement_clip_index"] = arrangement_clip_index
+        result = get_ableton_connection().send_command("set_clip_markers", params)
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error setting clip markers: {str(e)}")
+        return f"Error setting clip markers: {str(e)}"
+
+@mcp.tool()
+def set_clip_signature(ctx: Context, track_index: int, clip_index: int, numerator: int,
+                       denominator: int, arrangement_clip_index: int = None) -> str:
+    """Set a clip's time signature (numerator/denominator, e.g. 4/4).
+
+    Session slot, or an arrangement clip via arrangement_clip_index like add_notes_to_clip.
+    """
+    try:
+        params = {"track_index": track_index, "clip_index": clip_index,
+                  "numerator": numerator, "denominator": denominator}
+        if arrangement_clip_index is not None:
+            params["arrangement_clip_index"] = arrangement_clip_index
+        result = get_ableton_connection().send_command("set_clip_signature", params)
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error setting clip signature: {str(e)}")
+        return f"Error setting clip signature: {str(e)}"
+
+@mcp.tool()
+def quantize_pitch(ctx: Context, track_index: int, clip_index: int, pitch: int, grid: int = 5,
+                   strength: float = 1.0, arrangement_clip_index: int = None) -> str:
+    """Quantize one MIDI pitch in a clip. Same grid enum as quantize_clip.
+
+    Parameters:
+    - pitch: MIDI note 0-127
+    - grid: 1=1/4, 2=1/8, 3=1/8+1/8T, 4=1/8T, 5=1/16 (default), 6=1/16+1/16T, 7=1/16T, 8=1/32
+    - strength: 0.0-1.0 (1.0 = snap fully)
+    - arrangement_clip_index: optional arrangement clip, same as add_notes_to_clip
+    """
+    try:
+        params = {"track_index": track_index, "clip_index": clip_index, "pitch": pitch,
+                  "grid": grid, "strength": strength}
+        if arrangement_clip_index is not None:
+            params["arrangement_clip_index"] = arrangement_clip_index
+        result = get_ableton_connection().send_command("quantize_pitch", params)
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error quantizing pitch: {str(e)}")
+        return f"Error quantizing pitch: {str(e)}"
+
+@mcp.tool()
+def set_clip_ram_mode(ctx: Context, track_index: int, clip_index: int, ram_mode: bool,
+                      arrangement_clip_index: int = None) -> str:
+    """Enable or disable RAM mode on an audio clip (clip.ram_mode).
+
+    Session slot, or an arrangement clip via arrangement_clip_index like add_notes_to_clip.
+    """
+    try:
+        params = {"track_index": track_index, "clip_index": clip_index, "ram_mode": ram_mode}
+        if arrangement_clip_index is not None:
+            params["arrangement_clip_index"] = arrangement_clip_index
+        result = get_ableton_connection().send_command("set_clip_ram_mode", params)
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error setting clip RAM mode: {str(e)}")
+        return f"Error setting clip RAM mode: {str(e)}"
+
+@mcp.tool()
 def toggle_cue(ctx: Context) -> str:
     """Set or delete a cue point at the current arrangement song time (song.set_or_delete_cue)."""
     try:
@@ -2187,7 +2731,8 @@ def jump_to_cue(ctx: Context, direction: str = None, index: int = None) -> str:
     """Jump the playhead to a cue point.
 
     Parameters:
-    - direction: 'next' or 'prev' (song.jump_to_next_cue / jump_to_prev_cue)
+    - direction: 'next' or 'prev' (song.jump_to_next_cue / jump_to_prev_cue).
+      Returns the destination cue time, not a possibly stale current_song_time.
     - index: jump to this cue from get_cue_points instead of next/prev
     """
     try:
@@ -2203,6 +2748,116 @@ def jump_to_cue(ctx: Context, direction: str = None, index: int = None) -> str:
         return f"Error jumping to cue: {str(e)}"
 
 @mcp.tool()
+def tap_tempo(ctx: Context) -> str:
+    """Tap the song tempo once (song.tap_tempo)."""
+    try:
+        result = get_ableton_connection().send_command("tap_tempo")
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error tapping tempo: {str(e)}")
+        return f"Error tapping tempo: {str(e)}"
+
+@mcp.tool()
+def jump_by(ctx: Context, beats: float) -> str:
+    """Jump the playhead by a number of beats (song.jump_by). Negative values jump backward."""
+    try:
+        result = get_ableton_connection().send_command("jump_by", {"beats": beats})
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error jumping by beats: {str(e)}")
+        return f"Error jumping by beats: {str(e)}"
+
+@mcp.tool()
+def continue_playing(ctx: Context) -> str:
+    """Continue playback from the current position (song.continue_playing)."""
+    try:
+        result = get_ableton_connection().send_command("continue_playing")
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error continuing playback: {str(e)}")
+        return f"Error continuing playback: {str(e)}"
+
+@mcp.tool()
+def set_session_record(ctx: Context, on: bool) -> str:
+    """Enable or disable session recording (song.session_record)."""
+    try:
+        result = get_ableton_connection().send_command("set_session_record", {"on": on})
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error setting session record: {str(e)}")
+        return f"Error setting session record: {str(e)}"
+
+@mcp.tool()
+def set_session_automation_record(ctx: Context, on: bool) -> str:
+    """Enable or disable session automation recording (song.session_automation_record)."""
+    try:
+        result = get_ableton_connection().send_command("set_session_automation_record", {"on": on})
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error setting session automation record: {str(e)}")
+        return f"Error setting session automation record: {str(e)}"
+
+@mcp.tool()
+def re_enable_automation(ctx: Context) -> str:
+    """Re-enable automation that was overridden by a manual tweak (song.re_enable_automation)."""
+    try:
+        result = get_ableton_connection().send_command("re_enable_automation")
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error re-enabling automation: {str(e)}")
+        return f"Error re-enabling automation: {str(e)}"
+
+@mcp.tool()
+def set_count_in_duration(ctx: Context, bars: int) -> str:
+    """Set count-in duration in bars (song.count_in_duration; typically 0, 1, 2, or 4)."""
+    try:
+        result = get_ableton_connection().send_command("set_count_in_duration", {"bars": bars})
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error setting count-in duration: {str(e)}")
+        return f"Error setting count-in duration: {str(e)}"
+
+@mcp.tool()
+def set_exclusive_arm(ctx: Context, on: bool) -> str:
+    """Enable or disable exclusive arm (arming one track disarms others)."""
+    try:
+        result = get_ableton_connection().send_command("set_exclusive_arm", {"on": on})
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error setting exclusive arm: {str(e)}")
+        return f"Error setting exclusive arm: {str(e)}"
+
+@mcp.tool()
+def set_punch(ctx: Context, punch_in: bool = None, punch_out: bool = None) -> str:
+    """Set arrangement punch-in and/or punch-out. Omit a field to leave it unchanged."""
+    try:
+        params = {}
+        if punch_in is not None:
+            params["punch_in"] = punch_in
+        if punch_out is not None:
+            params["punch_out"] = punch_out
+        result = get_ableton_connection().send_command("set_punch", params)
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error setting punch: {str(e)}")
+        return f"Error setting punch: {str(e)}"
+
+@mcp.tool()
+def set_song_scale(ctx: Context, scale_name: str = None, root_note: int = None) -> str:
+    """Set the song scale name and/or root note (MIDI pitch class 0-11, C=0). Omit a field to leave unchanged."""
+    try:
+        params = {}
+        if scale_name is not None:
+            params["scale_name"] = scale_name
+        if root_note is not None:
+            params["root_note"] = root_note
+        result = get_ableton_connection().send_command("set_song_scale", params)
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error setting song scale: {str(e)}")
+        return f"Error setting song scale: {str(e)}"
+
+@mcp.tool()
 def set_crossfader(ctx: Context, value: float) -> str:
     """Set the master crossfader position, 0.0 (A) through 1.0 (B)."""
     try:
@@ -2211,6 +2866,16 @@ def set_crossfader(ctx: Context, value: float) -> str:
     except Exception as e:
         logger.error(f"Error setting crossfader: {str(e)}")
         return f"Error setting crossfader: {str(e)}"
+
+@mcp.tool()
+def set_cue_volume(ctx: Context, value: float) -> str:
+    """Set cue/preview volume, normalized 0.0-1.0 (master mixer cue_volume)."""
+    try:
+        result = get_ableton_connection().send_command("set_cue_volume", {"value": value})
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error setting cue volume: {str(e)}")
+        return f"Error setting cue volume: {str(e)}"
 
 @mcp.tool()
 def set_crossfade_assign(ctx: Context, track_index: int, assign: int) -> str:
@@ -2240,10 +2905,11 @@ def show_view(ctx: Context, view_name: str) -> str:
 @mcp.tool()
 def add_warp_marker(ctx: Context, track_index: int, clip_index: int, beat_time: float,
                     sample_time: float = None, arrangement_clip_index: int = None) -> str:
-    """Add a warp marker on an audio clip at beat_time (beats).
+    """Add a warp marker on an audio clip. The Remote Script constructs a WarpMarker
+    from beat_time (beats) and optional sample_time (seconds into the sample).
 
-    sample_time is optional seconds into the sample; omit to keep the current warp mapping
-    at that beat. Session slot, or an arrangement clip via arrangement_clip_index like add_notes_to_clip.
+    Omit sample_time to keep the current warp mapping at that beat. Session slot, or
+    an arrangement clip via arrangement_clip_index like add_notes_to_clip.
     """
     try:
         params = {"track_index": track_index, "clip_index": clip_index, "beat_time": beat_time}
@@ -2256,6 +2922,63 @@ def add_warp_marker(ctx: Context, track_index: int, clip_index: int, beat_time: 
     except Exception as e:
         logger.error(f"Error adding warp marker: {str(e)}")
         return f"Error adding warp marker: {str(e)}"
+
+@mcp.tool()
+def move_warp_marker(ctx: Context, track_index: int, clip_index: int, beat_time: float,
+                     beat_time_distance: float, arrangement_clip_index: int = None) -> str:
+    """Move a warp marker at beat_time by beat_time_distance (beats).
+
+    Session slot, or an arrangement clip via arrangement_clip_index like add_notes_to_clip.
+    """
+    try:
+        params = {"track_index": track_index, "clip_index": clip_index,
+                  "beat_time": beat_time, "beat_time_distance": beat_time_distance}
+        if arrangement_clip_index is not None:
+            params["arrangement_clip_index"] = arrangement_clip_index
+        result = get_ableton_connection().send_command("move_warp_marker", params)
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error moving warp marker: {str(e)}")
+        return f"Error moving warp marker: {str(e)}"
+
+@mcp.tool()
+def delete_warp_marker(ctx: Context, track_index: int, clip_index: int, beat_time: float,
+                       arrangement_clip_index: int = None) -> str:
+    """Delete the warp marker at beat_time (beats).
+
+    Session slot, or an arrangement clip via arrangement_clip_index like add_notes_to_clip.
+    """
+    try:
+        params = {"track_index": track_index, "clip_index": clip_index, "beat_time": beat_time}
+        if arrangement_clip_index is not None:
+            params["arrangement_clip_index"] = arrangement_clip_index
+        result = get_ableton_connection().send_command("delete_warp_marker", params)
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error deleting warp marker: {str(e)}")
+        return f"Error deleting warp marker: {str(e)}"
+
+@mcp.tool()
+def convert_clip_time(ctx: Context, track_index: int, clip_index: int, beat_time: float = None,
+                      sample_time: float = None, arrangement_clip_index: int = None) -> str:
+    """Convert between beat time and sample time on an audio clip (read-only).
+
+    Provide beat_time (beats) or sample_time (seconds). Session slot, or an arrangement
+    clip via arrangement_clip_index like add_notes_to_clip.
+    """
+    try:
+        params = {"track_index": track_index, "clip_index": clip_index}
+        if beat_time is not None:
+            params["beat_time"] = beat_time
+        if sample_time is not None:
+            params["sample_time"] = sample_time
+        if arrangement_clip_index is not None:
+            params["arrangement_clip_index"] = arrangement_clip_index
+        result = get_ableton_connection().send_command("convert_clip_time", params)
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error converting clip time: {str(e)}")
+        return f"Error converting clip time: {str(e)}"
 
 
 def main():
