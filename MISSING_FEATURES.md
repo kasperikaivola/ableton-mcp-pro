@@ -7,7 +7,9 @@ Capabilities that are not implemented, not fully functional, or blocked by the p
 - No save-set, insert-time, or track-reparent/create-group operation.
 - No LUFS / true-peak / spectrum / GR meter; no monitor-audio stream. `output_meter_level` misses short transients.
 - No general export; `resample_master` is a resampling-track recording, not an export command.
-- No load-sample-onto-drum-pad command; no public Slice-to-MIDI-Track.
+- Individual Drum Rack sample loading requires Live 12.4+ (`insert_chain`,
+  `DrumChain.insert_device`, and `Simpler.replace_sample`). `load_drum_pad_sample`
+  supports empty pads on those versions. No public Slice-to-MIDI-Track.
 - Creating a **new** rack macro map is GUI-only (`set_device_parameter` can only set existing macros).
 - Arrangement clip envelopes: `automation_envelope` / `create_automation_envelope` are session-only. Arrangement automation is track-level and not in the LOM.
 - Live will not place an instrument before MIDI effects.

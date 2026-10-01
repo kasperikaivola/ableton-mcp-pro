@@ -235,6 +235,7 @@ function dispatch(cmdType, params) {
         case "insert_device": return cmd_insert_device(params);
         case "set_simpler_sample_window": return cmd_set_simpler_sample_window(params);
         case "replace_simpler_sample": return cmd_replace_simpler_sample(params);
+        case "load_drum_pad_sample": return cmd_load_drum_pad_sample(params);
         case "press_current_dialog_button": return cmd_press_current_dialog_button(params);
         case "load_instrument_or_effect": return cmd_load_instrument_or_effect(params);
         case "load_browser_item": return cmd_load_instrument_or_effect(params);

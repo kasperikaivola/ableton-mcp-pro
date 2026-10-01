@@ -148,3 +148,77 @@ class SimplerMixin(object):
         except Exception as e:
             self.log_message("Error replacing Simpler sample: " + str(e))
             raise
+
+    def _load_drum_pad_sample(self, track_index, device_index, note, file_path, name=None):
+        """Create one Drum Rack chain, insert Simpler, and load a sample (Live 12.4+)."""
+        try:
+            note = self._integer_value(note, "note")
+            if note < 0 or note > 127:
+                raise ValueError("note must be between 0 and 127")
+            if not isinstance(file_path, _STRING_TYPES) or not file_path.strip():
+                raise ValueError("file_path is required")
+
+            app = self.application()
+            major = int(app.get_major_version())
+            minor = int(app.get_minor_version())
+            if major < 12 or (major == 12 and minor < 4):
+                raise Exception("load_drum_pad_sample requires Live 12.4+ (Simpler.replace_sample)")
+
+            track = self._get_track(track_index)
+            if device_index < 0 or device_index >= len(track.devices):
+                raise IndexError("Device index out of range")
+            rack = track.devices[device_index]
+            if not bool(self._safe_getattr(rack, "can_have_drum_pads", False)):
+                raise Exception("Device '{0}' is not a top-level Drum Rack".format(
+                    self._safe_getattr(rack, "name", "")))
+            if not hasattr(rack, "insert_chain"):
+                raise Exception("load_drum_pad_sample requires Live 12.4+ rack chain insertion")
+
+            target_pad = None
+            for pad in rack.drum_pads:
+                if int(pad.note) == note:
+                    target_pad = pad
+                    break
+            if target_pad is None:
+                raise Exception("Drum Rack has no pad for MIDI note {0}".format(note))
+            if len(target_pad.chains):
+                raise Exception("Drum Rack pad {0} is not empty".format(note))
+
+            chain_index = len(rack.chains)
+            try:
+                rack.insert_chain(chain_index)
+                chain = rack.chains[chain_index]
+                if not hasattr(chain, "in_note"):
+                    raise Exception("DrumChain.in_note is unavailable")
+                chain.in_note = note
+                if name:
+                    chain.name = name
+                if not hasattr(chain, "insert_device"):
+                    raise Exception("DrumChain.insert_device is unavailable")
+                chain.insert_device("Simpler")
+                simpler = chain.devices[-1]
+                if not hasattr(simpler, "replace_sample"):
+                    raise Exception("Simpler.replace_sample is unavailable")
+                simpler.replace_sample(file_path)
+                return {
+                    "track_index": track_index,
+                    "device_index": device_index,
+                    "rack_name": self._safe_getattr(rack, "name", ""),
+                    "note": note,
+                    "pad_name": self._safe_getattr(target_pad, "name", ""),
+                    "chain_index": chain_index,
+                    "chain_name": self._safe_getattr(chain, "name", ""),
+                    "file_path": file_path,
+                    "loaded": True,
+                }
+            except Exception:
+                # The pad was verified empty, so this removes only the partial
+                # chain created by this operation.
+                try:
+                    target_pad.delete_all_chains()
+                except Exception:
+                    pass
+                raise
+        except Exception as e:
+            self.log_message("Error loading Drum Rack pad sample: " + str(e))
+            raise

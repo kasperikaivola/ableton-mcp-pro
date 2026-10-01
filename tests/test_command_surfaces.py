@@ -75,11 +75,13 @@ EXPECTED_MCP_TOOLS = frozenset(
         "get_track_info",
         "get_track_routing",
         "get_warp_markers",
+        "generate_midi_continuation",
         "insert_device",
         "insert_rack_chain",
         "jump_by",
         "jump_to_cue",
         "load_drum_kit",
+        "load_drum_pad_sample",
         "load_instrument_or_effect",
         "move_device",
         "move_warp_marker",
@@ -231,6 +233,7 @@ EXPECTED_REMOTE_COMMANDS = frozenset(
         "jump_by",
         "jump_to_cue",
         "load_browser_item",
+        "load_drum_pad_sample",
         "load_instrument_or_effect",
         "move_device",
         "move_warp_marker",
@@ -373,6 +376,7 @@ EXPECTED_MAX_COMMANDS = frozenset(
         "jump_by",
         "jump_to_cue",
         "load_browser_item",
+        "load_drum_pad_sample",
         "load_instrument_or_effect",
         "move_device",
         "move_warp_marker",
@@ -489,6 +493,8 @@ _COMMAND_VARIABLES = {"command_type", "command_name", "cmd_type"}
 
 
 def _command_values(compare):
+    if not isinstance(compare, ast.Compare):
+        return set()
     if len(compare.ops) != 1:
         return set()
     if not isinstance(compare.left, ast.Name) or compare.left.id not in _COMMAND_VARIABLES:

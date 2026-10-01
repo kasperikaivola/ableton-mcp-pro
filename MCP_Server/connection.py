@@ -1,6 +1,7 @@
 import json
 import socket
-from dataclasses import dataclass
+import threading
+from dataclasses import dataclass, field
 from typing import Any, Dict
 
 from .runtime import logger
@@ -10,6 +11,9 @@ class AbletonConnection:
     host: str
     port: int
     sock: socket.socket = None
+    _transaction_lock: threading.RLock = field(
+        default_factory=threading.RLock, init=False, repr=False
+    )
     
     def connect(self) -> bool:
         """Connect to the Ableton Remote Script socket server"""
@@ -35,6 +39,10 @@ class AbletonConnection:
                 logger.error(f"Error disconnecting from Ableton: {str(e)}")
             finally:
                 self.sock = None
+
+    def _invalidate_socket(self):
+        """Close a failed socket so the next command gets a clean connection."""
+        self.disconnect()
 
     def receive_full_response(self, sock, buffer_size=8192):
         """Receive the complete response, potentially in multiple chunks.
@@ -85,6 +93,12 @@ class AbletonConnection:
 
     def send_command(self, command_type: str, params: Dict[str, Any] = None) -> Dict[str, Any]:
         """Send a command to Ableton and return the response"""
+        # FastMCP may execute sync tools concurrently. A request and its response
+        # are one indivisible transaction on this unframed persistent socket.
+        with self._transaction_lock:
+            return self._send_command_locked(command_type, params)
+
+    def _send_command_locked(self, command_type: str, params: Dict[str, Any] = None) -> Dict[str, Any]:
         if not self.sock and not self.connect():
             raise ConnectionError("Not connected to Ableton")
         
@@ -184,22 +198,21 @@ class AbletonConnection:
             return response.get("result", {})
         except socket.timeout:
             logger.error("Socket timeout while waiting for response from Ableton")
-            self.sock = None
+            self._invalidate_socket()
             raise Exception("Timeout waiting for Ableton response")
         except (ConnectionError, BrokenPipeError, ConnectionResetError) as e:
             logger.error(f"Socket connection error: {str(e)}")
-            self.sock = None
+            self._invalidate_socket()
             raise Exception(f"Connection to Ableton lost: {str(e)}")
         except json.JSONDecodeError as e:
             logger.error(f"Invalid JSON response from Ableton: {str(e)}")
             if 'response_data' in locals() and response_data:
                 logger.error(f"Raw response (first 200 bytes): {response_data[:200]}")
-            self.sock = None
+            self._invalidate_socket()
             raise Exception(f"Invalid response from Ableton: {str(e)}")
         except Exception as e:
             logger.error(f"Error communicating with Ableton: {str(e)}")
-            self.sock = None
+            self._invalidate_socket()
             raise Exception(f"Communication error with Ableton: {str(e)}")
-
 
 

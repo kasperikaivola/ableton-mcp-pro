@@ -34,6 +34,24 @@ This fork adds significant capabilities beyond the original:
 
 See [NEXT_STEPS.md](NEXT_STEPS.md) for the full feature list and roadmap.
 
+### Serum 2 manual settings
+
+For every Serum 2 patch design/edit, agents must include a **Serum 2 — manual
+settings** section in chat, identifying the track/device and every intended
+setting they could not apply through MCP. This covers wavetable selections,
+FX bus/order and control values, modulation routing, and other unmapped controls.
+Each entry must provide an explicit desired UI value/selection with units and
+`not applied — set manually` status. Unknown names or values stay unverified;
+manual instructions are not proof the settings were applied. If no manual steps
+are needed for the verified changes, the section must say so.
+
+[AGENTS.md](AGENTS.md#serum-2-manual-settings-handoff) defines the provider-neutral
+contract. MCP parameter-tool descriptions and plug-in inventory responses also
+carry reminders, including for agents used outside this repository. This guides
+the agent's handoff; it does not bypass Live's Configure limits or make missing
+controls automatable. Reload an already running MCP server to pick up these
+server-side reminders; no Live restart or Remote Script deployment is needed.
+
 ## Music Production Skills
 
 This project supports MCP-capable agents and includes 20 production skills for genre-specific workflows — from sound design to pattern programming to mixing. Claude discovers `.claude/skills/`; Codex discovers `.agents/skills/`. Both trees must contain exact byte-for-byte mirrors, checked with `python tools/check_skill_mirrors.py`.
@@ -226,7 +244,7 @@ AI Assistant --> MCP Server (Python) --> TCP socket (port 9877) --> Remote Scrip
 `get_session_info`, `get_application_info`, `get_track_info`, `get_device_parameters`, `get_arrangement_info`, `get_arrangement_clips`, `get_full_arrangement`, `get_clip_notes`, `get_arrangement_clip_notes`, `get_clip_envelope`, `get_simpler_sample`, `get_browser_tree`, `get_browser_items_at_path`, `get_drum_pads`, `get_clip_info`, `get_groove_pool`, `get_device_sidechain`, `get_rack_chains`, `get_rack_macros`, `get_cue_points`, `get_warp_markers`, `convert_clip_time`
 
 ### Modify
-`create_midi_track`, `create_audio_track`, `create_clip`, `create_arrangement_audio_clips_batch`, `resample_master`, `add_notes_to_clip`, `apply_note_modifications`, `duplicate_clip_to_arrangement`, `capture_midi`, `capture_and_insert_scene`, `set_clip_name`, `set_clip_loop`, `crop_clip`, `set_clip_launch`, `set_clip_color`, `set_clip_muted`, `set_clip_markers`, `set_clip_signature`, `set_clip_ram_mode`, `quantize_pitch`, `delete_clip`, `delete_arrangement_clip`, `duplicate_clip`, `delete_track`, `duplicate_track`, `move_device`, `set_track_name`, `set_track_volume`, `set_track_panning`, `set_track_color`, `set_track_mute`, `set_track_solo`, `set_track_arm`, `set_send_level`, `set_crossfader`, `set_crossfade_assign`, `set_tempo`, `set_time_signature`, `set_metronome`, `tap_tempo`, `jump_by`, `continue_playing`, `set_session_record`, `set_session_automation_record`, `re_enable_automation`, `set_count_in_duration`, `set_exclusive_arm`, `set_punch`, `set_song_scale`, `fire_clip`, `stop_clip`, `fire_scene`, `create_scene`, `delete_scene`, `duplicate_scene`, `set_scene_name`, `set_scene_color`, `set_scene_tempo`, `set_scene_signature`, `start_playback`, `stop_playback`, `play_arrangement`, `load_instrument_or_effect`, `insert_device`, `set_device_parameter`, `batch_set_device_parameters`, `set_plugin_preset`, `delete_device`, `set_device_sidechain`, `insert_rack_chain`, `set_chain_mixer`, `add_macro`, `remove_macro`, `randomize_macros`, `store_macro_variation`, `recall_macro_variation`, `delete_macro_variation`, `set_simpler_sample_window`, `replace_simpler_sample`, `press_current_dialog_button`, `apply_groove`, `clear_clip_groove`, `set_groove_amount`, `toggle_cue`, `jump_to_cue`, `set_cue_volume`, `show_view`, `add_warp_marker`, `move_warp_marker`, `delete_warp_marker`, `set_song_time`, `set_record_mode`, `set_arrangement_overdub`, `set_back_to_arranger`, `set_arrangement_loop`, `set_clip_envelope`, `clear_clip_envelope`, `undo`, `redo`, `remove_notes`, `quantize_clip`, `duplicate_clip_loop`, `duplicate_region`, `set_device_enabled`, `create_return_track`, `delete_return_track`, `stop_all_clips`, `set_clip_gain`, `set_clip_pitch`, `set_clip_warping`, `set_clip_warp_mode`
+`create_midi_track`, `create_audio_track`, `create_clip`, `create_arrangement_audio_clips_batch`, `resample_master`, `add_notes_to_clip`, `apply_note_modifications`, `duplicate_clip_to_arrangement`, `capture_midi`, `capture_and_insert_scene`, `set_clip_name`, `set_clip_loop`, `crop_clip`, `set_clip_launch`, `set_clip_color`, `set_clip_muted`, `set_clip_markers`, `set_clip_signature`, `set_clip_ram_mode`, `quantize_pitch`, `delete_clip`, `delete_arrangement_clip`, `duplicate_clip`, `delete_track`, `duplicate_track`, `move_device`, `set_track_name`, `set_track_volume`, `set_track_panning`, `set_track_color`, `set_track_mute`, `set_track_solo`, `set_track_arm`, `set_send_level`, `set_crossfader`, `set_crossfade_assign`, `set_tempo`, `set_time_signature`, `set_metronome`, `tap_tempo`, `jump_by`, `continue_playing`, `set_session_record`, `set_session_automation_record`, `re_enable_automation`, `set_count_in_duration`, `set_exclusive_arm`, `set_punch`, `set_song_scale`, `fire_clip`, `stop_clip`, `fire_scene`, `create_scene`, `delete_scene`, `duplicate_scene`, `set_scene_name`, `set_scene_color`, `set_scene_tempo`, `set_scene_signature`, `start_playback`, `stop_playback`, `play_arrangement`, `load_instrument_or_effect`, `load_drum_pad_sample`, `insert_device`, `set_device_parameter`, `batch_set_device_parameters`, `set_plugin_preset`, `delete_device`, `set_device_sidechain`, `insert_rack_chain`, `set_chain_mixer`, `add_macro`, `remove_macro`, `randomize_macros`, `store_macro_variation`, `recall_macro_variation`, `delete_macro_variation`, `set_simpler_sample_window`, `replace_simpler_sample`, `press_current_dialog_button`, `apply_groove`, `clear_clip_groove`, `set_groove_amount`, `toggle_cue`, `jump_to_cue`, `set_cue_volume`, `show_view`, `add_warp_marker`, `move_warp_marker`, `delete_warp_marker`, `set_song_time`, `set_record_mode`, `set_arrangement_overdub`, `set_back_to_arranger`, `set_arrangement_loop`, `set_clip_envelope`, `clear_clip_envelope`, `undo`, `redo`, `remove_notes`, `quantize_clip`, `duplicate_clip_loop`, `duplicate_region`, `set_device_enabled`, `create_return_track`, `delete_return_track`, `stop_all_clips`, `set_clip_gain`, `set_clip_pitch`, `set_clip_warping`, `set_clip_warp_mode`
 
 ### Arrangement
 The arrangement view supports a **full read-modify-write loop directly**, no session-view round-trip required:
@@ -252,6 +270,7 @@ Both views are useful — pick based on what you're doing:
 - Rack commands add/remove/randomize macros and store/recall/delete variations. `get_rack_macros` reports `visible_macro_count`, `variation_count`, `selected_variation_index`, and mapped macros; new macro mappings remain GUI-only.
 - `insert_device` accepts native Live device UI names on Live 12.3+. Plug-ins and Max devices continue to use browser / `.adg` workflows.
 - `get_simpler_sample` and `set_simpler_sample_window` use integer sample frames. `replace_simpler_sample` requires Live 12.4+.
+- `load_drum_pad_sample` requires Live 12.4+ and only targets an empty Drum Rack pad; it creates a mapped chain, inserts Simpler, and loads the sample path.
 - `apply_note_modifications` merges partial patches by `note_id`, preserving omitted fields and updating supported velocity, probability, and MPE fields in place.
 - `get_application_info` and `press_current_dialog_button` operate through the Remote Script. The latter requires the 9877 socket to already be bound; it cannot dismiss a startup dialog that prevents that socket from opening. See [MCP_ISSUES.md](MCP_ISSUES.md).
 
@@ -272,10 +291,14 @@ The source package is intentionally split into a tiny `__init__.py` entrypoint, 
 the [midigenai](https://github.com/nicholasbien/midigenai) package
 (v2 model, weights on
 [huggingface.co/nicholasbien/midigenai](https://huggingface.co/nicholasbien/midigenai))
-to generate melody continuations. The agent reads a clip with
-`get_clip_notes`, shells out to the bridge, and writes the result back with
-`add_notes_to_clip` — no MCP server changes needed. See
-[tools/README.md](tools/README.md) for setup, dependencies, and usage.
+to generate melody continuations. The same contract is available through the
+`generate_midi_continuation` MCP tool, which accepts Ableton-style seed notes
+and returns generated notes plus token counts and tempo. Use
+`add_notes_to_clip` or `create_clip` afterward to place the result in Live.
+The `[ai]` extra is optional: the MCP server starts without it, while a tool
+call reports the install command when the dependencies are missing. The CLI
+remains available for standalone use. See [tools/README.md](tools/README.md)
+for setup, dependencies, and usage.
 
 ## Timing and recording gotchas (Live 12, measured)
 

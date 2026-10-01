@@ -320,6 +320,58 @@ function cmd_replace_simpler_sample(params) {
     return sampleInfo(info);
 }
 
+function cmd_load_drum_pad_sample(params) {
+    requireLiveVersion(12, 4, "load_drum_pad_sample requires Live 12.4+");
+    var trackIndex = param(params, "track_index", 0);
+    var deviceIndex = integerParam(param(params, "device_index", 0), "device_index", 0);
+    var note = integerParam(param(params, "note", null), "note", 0);
+    if (note > 127) throw "note must be between 0 and 127";
+    var filePath = String(param(params, "file_path", ""));
+    if (!filePath) throw "file_path is required";
+    var name = param(params, "name", null);
+    var rackPath = getTrackPath(trackIndex) + " devices " + deviceIndex;
+    var rack = new LiveAPI(rackPath);
+    if (!rack.id || rack.id === "0") throw "Device index out of range";
+    if (!apiGetOptionalNum(rackPath, "can_have_drum_pads")) throw "Device is not a top-level Drum Rack";
+
+    var padPath = null;
+    var padCount = apiGetOptionalCount(rackPath, "drum_pads");
+    for (var i = 0; i < padCount; i++) {
+        var candidate = rackPath + " drum_pads " + i;
+        if (apiGetOptionalNum(candidate, "note") === note) {
+            padPath = candidate;
+            break;
+        }
+    }
+    if (!padPath) throw "Drum Rack has no pad for MIDI note " + note;
+    if (apiGetOptionalCount(padPath, "chains") > 0) throw "Drum Rack pad " + note + " is not empty";
+
+    var chainIndex = apiGetOptionalCount(rackPath, "chains");
+    try {
+        rack.call("insert_chain", chainIndex);
+        var chainPath = rackPath + " chains " + chainIndex;
+        var chain = new LiveAPI(chainPath);
+        chain.set("in_note", note);
+        if (name !== null) chain.set("name", String(name));
+        chain.call("insert_device", "Simpler");
+        var simplerPath = chainPath + " devices " + (apiGetOptionalCount(chainPath, "devices") - 1);
+        var simpler = new LiveAPI(simplerPath);
+        simpler.call("replace_sample", filePath);
+        return {
+            track_index: trackIndex,
+            device_index: deviceIndex,
+            note: note,
+            chain_index: chainIndex,
+            chain_name: apiGetOptionalStr(chainPath, "name"),
+            file_path: filePath,
+            loaded: true
+        };
+    } catch (e) {
+        try { new LiveAPI(padPath).call("delete_all_chains"); } catch (cleanupError) {}
+        throw "load_drum_pad_sample failed: " + e;
+    }
+}
+
 function mergeNoteDictionary(base, patch) {
     var merged = {};
     var key;

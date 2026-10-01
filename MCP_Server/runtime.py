@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 import logging
 import os
+import threading
 import time
 from typing import Any, AsyncIterator, Dict
 
@@ -43,29 +44,19 @@ mcp = FastMCP(
 
 # Global connection for resources
 _ableton_connection = None
+_connection_lock = threading.RLock()
 
 def get_ableton_connection():
     """Get or create a persistent Ableton connection"""
     global _ableton_connection
-    
-    if _ableton_connection is not None:
-        try:
-            # Test the connection with a simple ping
-            # We'll try to send an empty message, which should fail if the connection is dead
-            # but won't affect Ableton if it's alive
-            _ableton_connection.sock.settimeout(1.0)
-            _ableton_connection.sock.sendall(b'')
+    with _connection_lock:
+        # Sending b'' is not a TCP health check and changing the socket timeout
+        # here races an in-flight request. send_command owns validation and
+        # invalidates failed sockets before the next call reconnects.
+        if _ableton_connection is not None and _ableton_connection.sock is not None:
             return _ableton_connection
-        except Exception as e:
-            logger.warning(f"Existing connection is no longer valid: {str(e)}")
-            try:
-                _ableton_connection.disconnect()
-            except:
-                pass
-            _ableton_connection = None
-    
-    # Connection doesn't exist or is invalid, create a new one
-    if _ableton_connection is None:
+
+        _ableton_connection = None
         # Try to connect up to 3 times with a short delay between attempts
         max_attempts = 3
         for attempt in range(1, max_attempts + 1):
@@ -107,8 +98,7 @@ def get_ableton_connection():
             logger.error("Failed to connect to Ableton after multiple attempts")
             raise Exception("Could not connect to Ableton. Make sure the Remote Script is running.")
     
-    return _ableton_connection
-
+        return _ableton_connection
 
 
 

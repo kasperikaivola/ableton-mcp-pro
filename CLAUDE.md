@@ -14,6 +14,7 @@ Control Ableton Live through MCP tools. This project has two parts:
 - **Clip positions**: In beats (4.0 = 1 bar at 4/4)
 - **MIDI notes**: pitch 0–127 (C3=48, C4=60), velocity 0–127
 - **Arrangement editing** — direct audio/MIDI clip insertion is supported; use record_arrangement for session-based recording and keep LOM limits in mind
+- **Serum 2 handoff** — follow AGENTS.md's mandatory `Serum 2 — manual settings` final-chat section for every patch design/edit; enumerate intended wavetable, FX, modulation, and other settings not applied through MCP, with explicit desired values and manual status.
 
 ## Music Production Skills
 

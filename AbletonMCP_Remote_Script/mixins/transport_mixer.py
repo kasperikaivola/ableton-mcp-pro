@@ -287,10 +287,11 @@ class TransportMixerMixin(object):
                 raise Exception("Could not access Live Application")
             result = {}
             for name in ("major_version", "minor_version", "bugfix_version"):
-                value = self._safe_getattr(app, name, None)
-                if value is not None:
-                    result[name] = value
-            version = self._safe_getattr(app, "version", None)
+                getter = self._safe_getattr(app, "get_" + name, None)
+                if callable(getter):
+                    result[name] = int(getter())
+            version_getter = self._safe_getattr(app, "get_version_string", None)
+            version = version_getter() if callable(version_getter) else None
             if version is None:
                 parts = [result.get(name) for name in ("major_version", "minor_version", "bugfix_version")]
                 if all(part is not None for part in parts):

@@ -1,0 +1,5 @@
+# Isolated Windows Python 3.12 worker; do not install into the MCP host venv.
+torch-directml==0.2.5.dev240914
+numpy<2
+# Match the model code used in the CPU/GPU comparison (default checkpoint v4).
+midigenai @ git+https://github.com/nicholasbien/midigenai@414275b6cb23ce34d79af42aa085d9e25e5d3069

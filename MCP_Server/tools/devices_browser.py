@@ -5,6 +5,22 @@ from mcp.server.fastmcp import Context
 
 from ..runtime import get_ableton_connection, logger, mcp
 
+
+_MANUAL_SETTINGS_HANDOFF = (
+    "When designing/editing this plug-in, always list every intended setting not applied "
+    "through MCP in the final chat, grouped by track and device. For Serum 2, include a "
+    "'Serum 2 — manual settings' section covering wavetable selections, FX bus/order and "
+    "values, and other missing controls/modulation. Give exact desired UI values/selections "
+    "and units, labelled 'not applied — set manually'. These are instructions, not a "
+    "readback of current unmapped values. Compare the intended patch with this instance's "
+    "unfiltered configured inventory; do not assume every wavetable/FX control is missing. "
+    "Do not guess opaque host labels or claim wavetable position selects a table. Mark "
+    "unverifiable names/values unknown, and distinguish proposed choices from readback. "
+    "Describe any inaccessible time-varying automation separately; a static manual value "
+    "does not implement it. If all intended changes were verified, explicitly say no manual "
+    "settings are required."
+)
+
 @mcp.tool()
 def get_device_parameters(
     ctx: Context,
@@ -26,6 +42,15 @@ def get_device_parameters(
     Configure, save Default Configuration or an .adg rack so new instances keep
     the list.
 
+    Agent handoff: for EVERY Serum 2 patch design/edit, read this instance's
+    unfiltered inventory and include a 'Serum 2 — manual settings' section in
+    the final chat. List all intended but unapplied wavetable, FX, modulation,
+    and other settings with UI locations, exact desired values/units and
+    'not applied — set manually' status. Do not guess opaque host FX labels or
+    equate wavetable position with table selection. Unknown values stay unknown;
+    static manual values do not implement time-varying automation. State none
+    required only when the intended changes were verified.
+
     Parameters:
     - track_index: Track index (-1 master, -2/-3 returns)
     - device_index: Device index on the track
@@ -43,6 +68,9 @@ def get_device_parameters(
         if query:
             payload["query"] = query
         result = ableton.send_command("get_device_parameters", payload)
+        if result.get("is_plugin") or result.get("class_name") in ("PluginDevice", "AuPluginDevice"):
+            result = dict(result)
+            result["manual_settings_handoff"] = _MANUAL_SETTINGS_HANDOFF
         return json.dumps(result, indent=2)
     except Exception as e:
         logger.error(f"Error getting device parameters: {str(e)}")
@@ -62,6 +90,10 @@ def set_device_parameter(
     Prefer parameter_name for VSTs ("Filter 1 Freq", "Macro 1"). Do not reuse
     parameter_index across instances — Configure mappings differ and indices move.
     Missing names mean that knob is not in this instance's Configure panel.
+
+    For Serum 2, always include intended but unapplied controls in the final
+    chat's 'Serum 2 — manual settings' section with explicit UI values/units.
+    Keep verified writes separate; a failed write is not an applied setting.
 
     Parameters:
     - track_index: The index of the track containing the device
@@ -104,6 +136,11 @@ def batch_set_device_parameters(
     Set multiple device parameters at once using normalized values (0.0 to 1.0).
     Pass parameter_names (preferred for VSTs) or parameter_indices.
 
+    For Serum 2, always include a 'Serum 2 — manual settings' section in the
+    final chat: exact intended UI values/units for all missing/skipped controls,
+    wavetable selections, FX and modulation. Do not report skipped values as
+    applied or guess the semantic meaning of opaque host FX labels.
+
     Parameters:
     - track_index: The index of the track containing the device
     - device_index: The index of the device on the track
@@ -131,6 +168,7 @@ def batch_set_device_parameters(
         if skipped:
             miss = ", ".join(str(s.get("name")) for s in skipped)
             msg += f". Skipped {len(skipped)} not configured on this instance: {miss}"
+            msg += ". Include these unapplied settings and their intended UI values/units in the final chat's manual-settings handoff."
         return msg
     except Exception as e:
         logger.error(f"Error batch setting device parameters: {str(e)}")
@@ -214,14 +252,16 @@ def load_instrument_or_effect(ctx: Context, track_index: int, uri: str, clip_ind
             cmd_params["clip_index"] = clip_index
         result = ableton.send_command("load_browser_item", cmd_params)
         
-        # Check if the instrument was loaded successfully
+        # Browser loads are asynchronous from Live's device-list update. Report
+        # only what the backend observed instead of presenting an empty list as
+        # a verified post-load inventory.
         if result.get("loaded", False):
-            new_devices = result.get("new_devices", [])
-            if new_devices:
-                return f"Loaded instrument with URI '{uri}' on track {track_index}. New devices: {', '.join(new_devices)}"
-            else:
-                devices = result.get("devices_after", [])
-                return f"Loaded instrument with URI '{uri}' on track {track_index}. Devices on track: {', '.join(devices)}"
+            item_name = result.get("item_name", uri)
+            track_name = result.get("track_name", str(track_index))
+            return (
+                f"Live accepted browser item '{item_name}' on track '{track_name}'. "
+                "Use get_track_info to verify the resulting device list."
+            )
         else:
             return f"Failed to load instrument with URI '{uri}'"
     except Exception as e:
@@ -428,6 +468,35 @@ def get_drum_pads(ctx: Context, track_index: int, device_index: int = 0) -> str:
         return f"Error getting drum pads: {str(e)}"
 
 @mcp.tool()
+def load_drum_pad_sample(
+    ctx: Context,
+    track_index: int,
+    device_index: int,
+    note: int,
+    file_path: str,
+    name: str = None,
+) -> str:
+    """Load one sample onto an empty Drum Rack pad (Live 12.4+).
+
+    The command creates a DrumChain mapped to `note`, inserts Simpler, and
+    loads `file_path`. Existing pad contents are never replaced.
+    """
+    try:
+        params = {
+            "track_index": track_index,
+            "device_index": device_index,
+            "note": note,
+            "file_path": file_path,
+        }
+        if name is not None:
+            params["name"] = name
+        result = get_ableton_connection().send_command("load_drum_pad_sample", params)
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error loading Drum Rack pad sample: {str(e)}")
+        return f"Error loading Drum Rack pad sample: {str(e)}"
+
+@mcp.tool()
 def get_simpler_sample(ctx: Context, track_index: int, device_index: int) -> str:
     """Read a SimplerDevice's sample path and marker positions in integer sample frames.
 
@@ -537,4 +606,3 @@ def set_device_sidechain(ctx: Context, track_index: int, device_index: int, rout
     except Exception as e:
         logger.error(f"Error setting device sidechain: {str(e)}")
         return f"Error setting device sidechain: {str(e)}"
-

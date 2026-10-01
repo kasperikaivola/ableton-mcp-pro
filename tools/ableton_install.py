@@ -272,12 +272,17 @@ def ping_remote_script(host: str = "127.0.0.1", port: int = DEFAULT_PORT, timeou
             pass
 
 
-def wait_for_remote_script(host: str = "127.0.0.1", port: int = DEFAULT_PORT, timeout: float = 180.0):
-    """Wait until the Remote Script answers get_session_info (port accept is not enough)."""
+def wait_for_remote_script(host: str = "127.0.0.1", port: int = DEFAULT_PORT, timeout: float = 180.0,
+                           set_file: Path | None = None):
+    """Wait for a session response and, optionally, the explicitly requested Set."""
+    expected = os.path.normcase(str(Path(set_file).resolve())) if set_file else None
     deadline = time.time() + timeout
     while time.time() < deadline:
         result = ping_remote_script(host=host, port=port, timeout=3.0)
-        if result is not None:
+        current = result.get("file_path") if isinstance(result, dict) else None
+        if result is not None and (expected is None or (
+            current and os.path.normcase(str(Path(current).resolve())) == expected
+        )):
             return result
         time.sleep(0.8)
     return None
@@ -357,7 +362,7 @@ def deploy(source: Path | None = None, destinations: list[Path] | None = None, *
     return copied
 
 
-def _post_close_to_live_windows() -> int:
+def _post_close_to_live_windows(pids=None) -> int:
     """Ask Live windows to close (WM_CLOSE). Returns how many windows were signaled."""
     if platform.system() != "Windows":
         return 0
@@ -366,18 +371,24 @@ def _post_close_to_live_windows() -> int:
 
     user32 = ctypes.windll.user32
     WM_CLOSE = 0x0010
+    target_pids = {int(pid) for pid in pids} if pids is not None else None
     count = [0]
 
     @ctypes.WINFUNCTYPE(ctypes.c_bool, wintypes.HWND, wintypes.LPARAM)
     def callback(hwnd, _lparam):
         if not user32.IsWindowVisible(hwnd):
             return True
+        if target_pids is not None:
+            window_pid = wintypes.DWORD()
+            user32.GetWindowThreadProcessId(hwnd, ctypes.byref(window_pid))
+            if window_pid.value not in target_pids or user32.GetWindow(hwnd, 4):
+                return True
         length = user32.GetWindowTextLengthW(hwnd)
         buf = ctypes.create_unicode_buffer(length + 1)
         user32.GetWindowTextW(hwnd, buf, length + 1)
         title = buf.value or ""
         lowered = title.lower()
-        if "ableton live" in lowered or title.startswith("Live"):
+        if target_pids is not None or "ableton live" in lowered or title.startswith("Live"):
             user32.PostMessageW(hwnd, WM_CLOSE, 0, 0)
             count[0] += 1
         return True
@@ -387,20 +398,13 @@ def _post_close_to_live_windows() -> int:
 
 
 def quit_live(*, system: str | None = None, timeout: float = 45.0, port: int = DEFAULT_PORT) -> None:
-    """Ask Live to exit. Prefer WM_CLOSE so the next launch is not a crash-recovery dialog."""
+    """Request normal shutdown; never force-kill Live or dismiss save dialogs here."""
     system = system or platform.system()
     procs = running_live_processes(system=system)
     if not procs and not port_is_open(port=port):
         return
     if system == "Windows":
-        _post_close_to_live_windows()
-        for proc in procs:
-            subprocess.run(
-                ["taskkill", "/PID", str(proc["pid"])],
-                capture_output=True,
-                text=True,
-                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
-            )
+        _post_close_to_live_windows(pids=[proc["pid"] for proc in procs])
     else:
         for proc in procs:
             subprocess.run(["kill", str(proc["pid"])], capture_output=True, text=True)
@@ -409,37 +413,38 @@ def quit_live(*, system: str | None = None, timeout: float = 45.0, port: int = D
         if not live_is_running(system=system) and not port_is_open(port=port, timeout=0.3):
             return
         time.sleep(0.4)
-    if system == "Windows":
-        for proc in running_live_processes(system=system):
-            subprocess.run(
-                ["taskkill", "/F", "/PID", str(proc["pid"])],
-                capture_output=True,
-                text=True,
-                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
-            )
-    else:
-        for proc in running_live_processes(system=system):
-            subprocess.run(["kill", "-9", str(proc["pid"])], capture_output=True, text=True)
-    deadline = time.time() + 15.0
-    while time.time() < deadline:
-        if not live_is_running(system=system) and not port_is_open(port=port, timeout=0.3):
-            time.sleep(1.0)
-            return
-        time.sleep(0.4)
-    raise RuntimeError("Ableton Live did not exit")
+    raise RuntimeError("Ableton Live did not complete normal shutdown; check for a dialog. No force-kill attempted.")
 
 
-def start_live(executable: Path | None = None, *, system: str | None = None, env: dict | None = None) -> Path:
+def validate_set_file(set_file: Path) -> Path:
+    path = Path(set_file).resolve(strict=True)
+    if not path.is_file() or path.suffix.lower() != ".als":
+        raise ValueError("Set must be an existing .als file: {0}".format(path))
+    return path
+
+
+def start_live(executable: Path | None = None, *, system: str | None = None, env: dict | None = None,
+               set_file: Path | None = None) -> Path:
     system = system or platform.system()
     exe = Path(executable) if executable is not None else default_live_executable(system=system, env=env)
     if exe is None:
         raise FileNotFoundError(
             "Ableton Live executable not found. Set ABLETON_LIVE_EXE or install Live."
         )
+    set_path = validate_set_file(set_file) if set_file is not None else None
     if system == "Darwin" and str(exe).endswith(".app"):
-        subprocess.Popen(["open", "-a", str(exe)], start_new_session=True)
+        command = ["open", "-a", str(exe)]
+        if set_path is not None:
+            command.append(str(set_path))
+        subprocess.Popen(command, start_new_session=True)
     elif system == "Windows":
-        os.startfile(str(exe))  # type: ignore[attr-defined]
+        if set_path is None:
+            os.startfile(str(exe))  # type: ignore[attr-defined]
+        else:
+            subprocess.Popen([str(exe), str(set_path)], stdin=subprocess.DEVNULL,
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                             creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
     else:
-        subprocess.Popen([str(exe)], start_new_session=True)
+        command = [str(exe)] + ([str(set_path)] if set_path is not None else [])
+        subprocess.Popen(command, start_new_session=True)
     return exe

@@ -189,8 +189,15 @@ class AbletonMCP(
 
                         self.log_message("Received command: " + str(command.get("type", "unknown")))
 
-                        # Process the command and get response
-                        response = self._process_command(command)
+                        # The Live object model is main-thread-affine. The two
+                        # real-time recording commands retain their worker-thread
+                        # implementations and marshal their own individual steps.
+                        if command.get("type") in ("record_arrangement", "resample_master"):
+                            response = self._process_command(command)
+                        else:
+                            response = self._run_on_main_thread(
+                                lambda: self._process_command(command, on_main_thread=True)
+                            )
 
                         # Send the response with explicit encoding
                         try:
@@ -234,7 +241,26 @@ class AbletonMCP(
                 pass
             self.log_message("Client handler stopped")
 
-    def _process_command(self, command):
+    def _run_on_main_thread(self, operation, timeout=9.0):
+        """Run one ordinary command on Live's main thread with a bounded wait."""
+        response_queue = queue.Queue()
+
+        def task():
+            try:
+                response_queue.put((True, operation()))
+            except Exception as e:
+                response_queue.put((False, e))
+
+        self.schedule_message(0, task)
+        try:
+            succeeded, value = response_queue.get(timeout=timeout)
+        except queue.Empty:
+            raise Exception("Timeout waiting for Live's main thread")
+        if not succeeded:
+            raise value
+        return value
+
+    def _process_command(self, command, on_main_thread=False):
         """Process a command from the client and return a response"""
         # Refresh song reference — cached ref can become stale after doc swap
         self._song = self.song()
@@ -357,6 +383,7 @@ class AbletonMCP(
                                  "store_macro_variation", "recall_macro_variation", "delete_macro_variation",
                                  "duplicate_clip_to_arrangement", "insert_device",
                                  "set_simpler_sample_window", "replace_simpler_sample",
+                                 "load_drum_pad_sample",
                                  "press_current_dialog_button", "apply_note_modifications",
                                  "capture_and_insert_scene", "crop_clip", "set_clip_launch",
                                  "toggle_cue", "jump_to_cue", "set_crossfader", "set_crossfade_assign",
@@ -653,6 +680,10 @@ class AbletonMCP(
                             result = self._replace_simpler_sample(
                                 params.get("track_index", 0), params.get("device_index", 0),
                                 params.get("file_path", ""))
+                        elif command_type == "load_drum_pad_sample":
+                            result = self._load_drum_pad_sample(
+                                params.get("track_index", 0), params.get("device_index", 0),
+                                params.get("note"), params.get("file_path", ""), params.get("name"))
                         elif command_type == "press_current_dialog_button":
                             result = self._press_current_dialog_button(params.get("index"))
                         elif command_type == "create_return_track":
@@ -791,11 +822,14 @@ class AbletonMCP(
                         response_queue.put({"status": "error", "message": str(e)})
 
                 # Schedule the task to run on the main thread
-                try:
-                    self.schedule_message(0, main_thread_task)
-                except AssertionError:
-                    # If we're already on the main thread, execute directly
+                if on_main_thread:
                     main_thread_task()
+                else:
+                    try:
+                        self.schedule_message(0, main_thread_task)
+                    except AssertionError:
+                        # If we're already on the main thread, execute directly
+                        main_thread_task()
 
                 # Wait for the response with a timeout
                 try:

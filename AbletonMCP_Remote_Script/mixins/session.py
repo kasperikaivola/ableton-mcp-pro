@@ -41,6 +41,7 @@ class SessionMixin(object):
         """Get information about the current session"""
         try:
             result = {
+                "file_path": self._safe_getattr(self._song, "file_path", ""),
                 "tempo": self._song.tempo,
                 "signature_numerator": self._song.signature_numerator,
                 "signature_denominator": self._song.signature_denominator,

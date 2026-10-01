@@ -6,7 +6,8 @@ Remaining work only. Catalog of gaps: [MISSING_FEATURES.md](MISSING_FEATURES.md)
 
 - No save-set, insert-time, or track-reparent/create-group.
 - No LUFS / true-peak / spectrum / GR meter; no general export (`resample_master` is a recording workaround).
-- No load-sample-onto-drum-pad; no public Slice-to-MIDI-Track.
+- Drum-pad sample loading is available through `load_drum_pad_sample` on Live
+  12.4+ only; no public Slice-to-MIDI-Track.
 - New rack macro **maps** are GUI-only.
 - Arrangement clip envelopes and clipless arrangement automation are not in the LOM.
 - Live will not place an instrument before MIDI effects.

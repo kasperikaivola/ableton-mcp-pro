@@ -6,6 +6,7 @@ Script deploy, pass --reload to quit Live and start it again so the new script l
 
     python tools/launch_ableton.py
     python tools/launch_ableton.py --reload
+    python tools/launch_ableton.py --reload --set "C:/sets/Track.als"
 
 Overrides: ABLETON_LIVE_EXE, ABLETON_LIVE_ROOT.
 """
@@ -32,6 +33,12 @@ def parse_args(argv=None):
         "--exe",
         type=Path,
         help="Path to the Live executable or .app. Default: discovered Live 12/11 install.",
+    )
+    parser.add_argument(
+        "--set",
+        dest="set_file",
+        type=Path,
+        help="Open this saved .als Set; validate it before quitting and wait for its path in session readback.",
     )
     parser.add_argument(
         "--reload",
@@ -70,6 +77,8 @@ def _emit(payload: dict, as_json: bool) -> None:
     print(payload.get("message", payload.get("status")))
     if payload.get("exe"):
         print("exe: {0}".format(payload["exe"]))
+    if payload.get("set_file"):
+        print("set: {0}".format(payload["set_file"]))
     if payload.get("remote_script"):
         print("Remote Script ready on port {0} (tempo {1})".format(
             payload.get("port", inst.DEFAULT_PORT),
@@ -84,6 +93,12 @@ def _emit(payload: dict, as_json: bool) -> None:
 
 def main(argv=None) -> int:
     args = parse_args(argv)
+    if args.set_file is not None:
+        try:
+            args.set_file = inst.validate_set_file(args.set_file)
+        except (OSError, ValueError) as exc:
+            _emit({"status": "error", "message": "Invalid Set: {0}".format(exc)}, args.json)
+            return 1
     old_procs = inst.running_live_processes()
     running = bool(old_procs)
     payload = {
@@ -93,6 +108,7 @@ def main(argv=None) -> int:
         "launched": False,
         "reloaded": False,
         "remote_script": None,
+        "set_file": str(args.set_file) if args.set_file else None,
     }
     if running and not args.reload:
         payload["status"] = "already_running"
@@ -102,6 +118,12 @@ def main(argv=None) -> int:
         payload["port_open"] = payload["remote_script"] is not None or inst.port_is_open(port=args.port)
         _emit(payload, args.json)
         return 0
+
+    executable = args.exe or inst.default_live_executable()
+    if executable is None or not Path(executable).exists():
+        payload.update(status="error", message="Ableton Live executable not found; no shutdown attempted.")
+        _emit(payload, args.json)
+        return 1
 
     if args.reload and running:
         try:
@@ -115,7 +137,7 @@ def main(argv=None) -> int:
         running = False
 
     try:
-        exe = inst.start_live(args.exe)
+        exe = inst.start_live(executable, set_file=args.set_file)
     except Exception as exc:
         payload["status"] = "error"
         payload["message"] = str(exc)
@@ -129,7 +151,7 @@ def main(argv=None) -> int:
     if not args.no_wait:
         fresh = inst.wait_for_new_live_process(old_pids, timeout=min(60.0, args.wait_timeout))
         payload["processes"] = fresh or inst.running_live_processes()
-        session = inst.wait_for_remote_script(port=args.port, timeout=args.wait_timeout)
+        session = inst.wait_for_remote_script(port=args.port, timeout=args.wait_timeout, set_file=args.set_file)
         payload["remote_script"] = session
         payload["port_open"] = session is not None or inst.port_is_open(port=args.port)
         if session is None:
