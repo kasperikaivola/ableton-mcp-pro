@@ -1,0 +1,121 @@
+{
+  "VoiceFilter:kParamFreq": {
+    "destModuleID": 0,
+    "destModuleParamID": 3,
+    "destModuleParamName": "kParamFreq",
+    "destModuleTypeString": "VoiceFilter",
+    "plainParams": {
+      "kParamAmount": 29.682552814483643
+    },
+    "source": [
+      6,
+      0
+    ]
+  },
+  "FXDelay:kParamWet": {
+    "destModuleID": 1,
+    "destModuleParamID": 1,
+    "destModuleParamName": "kParamWet",
+    "destModuleTypeString": "FXDelay",
+    "plainParams": {
+      "kParamAmount": -22.16377854347229
+    },
+    "source": [
+      32,
+      0
+    ]
+  },
+  "Oscillator:kParamVolume": {
+    "destModuleID": 3,
+    "destModuleParamID": 1,
+    "destModuleParamName": "kParamVolume",
+    "destModuleTypeString": "Oscillator",
+    "plainParams": {
+      "kParamAmount": -100.0
+    },
+    "source": [
+      1,
+      0
+    ]
+  },
+  "VoiceFilter:kParamReso": {
+    "destModuleID": 1,
+    "destModuleParamID": 4,
+    "destModuleParamName": "kParamReso",
+    "destModuleTypeString": "VoiceFilter",
+    "plainParams": {
+      "kParamAmount": 11.638224124908447
+    },
+    "source": [
+      25,
+      0
+    ]
+  },
+  "WTOsc:kParamTablePos": {
+    "destModuleID": 0,
+    "destModuleParamID": 6,
+    "destModuleParamName": "kParamTablePos",
+    "destModuleTypeString": "WTOsc",
+    "plainParams": {
+      "kParamAmount": 100.0
+    },
+    "source": [
+      26,
+      0
+    ]
+  },
+  "WTOsc:kParamWarp": {
+    "destModuleID": 0,
+    "destModuleParamID": 0,
+    "destModuleParamName": "kParamWarp",
+    "destModuleTypeString": "WTOsc",
+    "plainParams": {
+      "kParamAmount": 86.13623380661011
+    },
+    "source": [
+      27,
+      0
+    ]
+  },
+  "Global:kParamMasterTuning": {
+    "destModuleID": 0,
+    "destModuleParamID": 1,
+    "destModuleParamName": "kParamMasterTuning",
+    "destModuleTypeString": "Global",
+    "plainParams": {
+      "kParamAmount": 3.000009059906006,
+      "kParamBipolar": 1.0,
+      "kParamOut": 1.5000022016465664
+    },
+    "source": [
+      6,
+      0
+    ]
+  },
+  "VoiceFilter:kParamDrive": {
+    "destModuleID": 0,
+    "destModuleParamID": 5,
+    "destModuleParamName": "kParamDrive",
+    "destModuleTypeString": "VoiceFilter",
+    "plainParams": {
+      "kParamAmount": 41.22806787490845
+    },
+    "source": [
+      28,
+      0
+    ]
+  },
+  "FXPhaser:kParamFreq": {
+    "destModuleID": 0,
+    "destModuleParamID": 6,
+    "destModuleParamName": "kParamFreq",
+    "destModuleTypeString": "FXPhaser",
+    "plainParams": {
+      "kParamAmount": 100.0
+    },
+    "source": [
+      16,
+      0
+    ]
+  }
+}

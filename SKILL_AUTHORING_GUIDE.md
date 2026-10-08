@@ -2,7 +2,7 @@
 
 Best practices for creating and maintaining music production skills for Ableton MCP-capable agents.
 
-Claude discovers skills under `.claude/skills/`; Codex discovers `.agents/skills/`. These are provider-specific discovery paths for the same 20 skills and must remain exact mirrors. After changing a skill, run `python tools/check_skill_mirrors.py`.
+Claude discovers skills under `.claude/skills/`; Codex discovers `.agents/skills/`. These are provider-specific discovery paths for the same skills and must remain exact mirrors. After changing a skill, run `python tools/check_skill_mirrors.py`.
 
 ## What Makes a Good Skill
 
@@ -12,6 +12,7 @@ An excellent skill lets an MCP-capable agent execute a complete production workf
 ### Quality Checklist
 - [ ] Specific parameter values (not "add some reverb" — "Reverb: decay 3.5s, pre-delay 20ms, diffusion 80%")
 - [ ] Actionable via MCP (no manual drag-and-drop, no GUI-only operations)
+- [ ] For explicitly hybrid VST workflows, separate verified MCP writes from exact manual UI instructions; follow [synth-sound-design](.agents/skills/synth-sound-design/SKILL.md) and AGENTS.md's handoff contract. This is an intentional exception to the all-MCP checklist item.
 - [ ] Build order at the end (numbered steps matching MCP tool sequence)
 - [ ] At least one ASCII pattern diagram for drum/rhythm skills
 - [ ] Grounded in research (multiple sources including blog posts and videos, not just AI knowledge)
@@ -73,7 +74,7 @@ Not every skill needs all sections. A bass skill doesn't need pattern diagrams. 
 
 **Supported mixdown path:** `resample_master` records the main mix through a resampling track. Live has no general export command.
 
-If a skill requires unsupported operations for its core workflow, either find a workaround or don't create the skill. A skill that can't be executed is worse than no skill.
+For fully automated skills, find a supported workaround for required unsupported operations. For explicitly requested hybrid sound design, keep the manual steps actionable and visible in chat; do not claim the full design was executed by MCP.
 
 ## Writing Parameter Values
 

@@ -1,0 +1,1049 @@
+{
+  "metadata": {
+    "fileType": "SerumPreset",
+    "hash": "dbe3ba9436e82676e8bd6c91dbc4893d",
+    "presetAuthor": "endeavour",
+    "presetDescription": "facebook.com/endeavourtrance",
+    "presetName": "Psy_Squelch_Template",
+    "product": "Serum2",
+    "productVersion": "2.0.16",
+    "tags": [
+      "Wavetable",
+      "Poly"
+    ],
+    "url": "https://xferrecords.com/",
+    "vendor": "Xfer Records",
+    "version": 6.0
+  },
+  "data": {
+    "Arp0": {
+      "plainParams": "default"
+    },
+    "ArpClip0": {
+      "clip": {},
+      "plainParams": "default"
+    },
+    "ArpClip1": {
+      "clip": {},
+      "plainParams": "default"
+    },
+    "ArpClip10": {
+      "clip": {},
+      "plainParams": "default"
+    },
+    "ArpClip11": {
+      "clip": {},
+      "plainParams": "default"
+    },
+    "ArpClip2": {
+      "clip": {},
+      "plainParams": "default"
+    },
+    "ArpClip3": {
+      "clip": {},
+      "plainParams": "default"
+    },
+    "ArpClip4": {
+      "clip": {},
+      "plainParams": "default"
+    },
+    "ArpClip5": {
+      "clip": {},
+      "plainParams": "default"
+    },
+    "ArpClip6": {
+      "clip": {},
+      "plainParams": "default"
+    },
+    "ArpClip7": {
+      "clip": {},
+      "plainParams": "default"
+    },
+    "ArpClip8": {
+      "clip": {},
+      "plainParams": "default"
+    },
+    "ArpClip9": {
+      "clip": {},
+      "plainParams": "default"
+    },
+    "ClipPlayer": {
+      "kUIParamPianoRollNotePreview": 1.0,
+      "kUIParamPreviewClip": 0.0,
+      "kUIParamSelectedClip": 0.0
+    },
+    "ClipPlayer0": {
+      "plainParams": "default"
+    },
+    "Env0": {
+      "plainParams": {
+        "kParamAttack": 0.0005153631860372542,
+        "kParamCurve1": 40.00000059604645,
+        "kParamCurve2": 60.00000238418579,
+        "kParamCurve3": 60.00000238418579,
+        "kParamDecay": 0.5734249218403691,
+        "kParamRelease": 0.014700845522658545
+      }
+    },
+    "Env1": {
+      "plainParams": {
+        "kParamAttack": 0.0005153631860372542,
+        "kParamCurve1": 40.00000059604645,
+        "kParamCurve2": 60.00000238418579,
+        "kParamCurve3": 60.00000238418579,
+        "kParamRelease": 0.014700845522658545
+      }
+    },
+    "Env2": {
+      "plainParams": {
+        "kParamAttack": 0.0005153631860372542,
+        "kParamCurve1": 40.00000059604645,
+        "kParamCurve2": 60.00000238418579,
+        "kParamCurve3": 60.00000238418579,
+        "kParamRelease": 0.014700845522658545
+      }
+    },
+    "Env3": {
+      "plainParams": {
+        "kParamCurve1": 50.0,
+        "kParamCurve2": 66.60000000000001,
+        "kParamCurve3": 66.60000000000001
+      }
+    },
+    "FXRack0": {
+      "FX": [
+        {
+          "FXDistortion": {
+            "plainParams": {
+              "kParamDrive": 73.68420958518982
+            }
+          },
+          "flex": [
+            {
+              "curveVals": [
+                0.4999999701976776,
+                0.4999999701976776
+              ],
+              "numPoints": 1,
+              "xVals": [
+                0.0,
+                1.0
+              ],
+              "yVals": [
+                1.0,
+                0.0
+              ]
+            },
+            {
+              "curveVals": [
+                0.4999999701976776,
+                0.4999999701976776
+              ],
+              "numPoints": 1,
+              "xVals": [
+                0.0,
+                1.0
+              ],
+              "yVals": [
+                1.0,
+                0.0
+              ]
+            }
+          ],
+          "kUIParamMixOrGain": 0.0,
+          "type": 0
+        },
+        {
+          "FXChorus": {
+            "lfophasor": 0.9671232104301453,
+            "plainParams": {
+              "kParamFeedback": 9.500000141561031
+            }
+          },
+          "kUIParamMixOrGain": 0.0,
+          "type": 3
+        },
+        {
+          "FXDelay": {
+            "plainParams": {
+              "kParamBW": 6.750000089406967,
+              "kParamFeedback": 40.00000059604645,
+              "kParamWet": 30.000001192092896
+            }
+          },
+          "kUIParamMixOrGain": 0.0,
+          "type": 4
+        },
+        {
+          "FXComp": {
+            "plainParams": {
+              "kParamAttack": 90.09100715319826,
+              "kParamCompensatedWetDry": 0.0,
+              "kParamGain0": 4.600000000000001,
+              "kParamGain2": 4.600000000000001,
+              "kParamRatioBelow": 0.75,
+              "kParamRelease": 89.92907295688329
+            }
+          },
+          "kUIParamMixOrGain": 0.0,
+          "type": 5
+        },
+        {
+          "FXReverb": {
+            "plainParams": {
+              "kParamDelay": 0.0,
+              "kParamFeedback": 28.00000011920929,
+              "kParamFreqB": 50.0,
+              "kParamSize": 19.40350979566574,
+              "kParamWet": 11.508773267269135,
+              "kParamWidth": 100.0
+            }
+          },
+          "kUIParamMixOrGain": 0.0,
+          "type": 6
+        }
+      ],
+      "displayName": "",
+      "plainParams": "default"
+    },
+    "FXRack1": {
+      "FX": [],
+      "displayName": "",
+      "plainParams": "default"
+    },
+    "FXRack2": {
+      "FX": [],
+      "displayName": "",
+      "plainParams": "default"
+    },
+    "Filter": {
+      "kUIParamMixOrGain": 0.0
+    },
+    "Global0": {
+      "plainParams": {
+        "kParamLimitSameNotePolyphony": 1.0,
+        "kParamMasterVolume": 0.8541468078999999,
+        "kParamOversampling": 2.0,
+        "kParamPolyCount": 16.0,
+        "kParamPortaAlways": 1.0,
+        "kParamPortamentoTime": 0.05114536538800194,
+        "kParamS1Compatibility": 1.0
+      }
+    },
+    "GranularOsc": [
+      {
+        "kUIParamDisplayXYInput": 0.0
+      },
+      {
+        "kUIParamDisplayXYInput": 0.0
+      },
+      {
+        "kUIParamDisplayXYInput": 0.0
+      }
+    ],
+    "LFO0": {
+      "curveData": {
+        "curveVals": [
+          0.4999998,
+          0.3749997843714321,
+          0.4999999701976776
+        ],
+        "loopbackPointNum": 63,
+        "numPoints": 2,
+        "xVals": [
+          0.0,
+          0.1111111111111111,
+          1.0
+        ],
+        "yVals": [
+          0.0,
+          0.9926470588235294,
+          0.0
+        ]
+      },
+      "pathData": {},
+      "plainParams": {
+        "kParamDefaultMode": 0.0,
+        "kParamMode": "Envelope",
+        "kParamRate": 7.174450055988084
+      }
+    },
+    "LFO1": {
+      "curveData": {
+        "curveVals": [
+          0.4999998,
+          0.4999999701976776,
+          0.4999999701976776
+        ],
+        "loopbackPointNum": 65,
+        "numPoints": 2,
+        "xVals": [
+          0.0,
+          0.5,
+          1.0
+        ],
+        "yVals": [
+          1.0,
+          0.0,
+          1.0
+        ]
+      },
+      "pathData": {},
+      "plainParams": {
+        "kParamDefaultMode": 0.0,
+        "kParamMode": "Free",
+        "kParamRate": 4.671798767509854
+      }
+    },
+    "LFO2": {
+      "curveData": {
+        "curveVals": [
+          0.4999999701976776,
+          0.4999999701976776,
+          0.4999999701976776
+        ],
+        "loopbackPointNum": 65,
+        "numPoints": 2,
+        "xVals": [
+          0.0,
+          0.5,
+          1.0
+        ],
+        "yVals": [
+          1.0,
+          0.0,
+          1.0
+        ]
+      },
+      "pathData": {},
+      "plainParams": {
+        "kParamDefaultMode": 0.0,
+        "kParamMode": "Free"
+      }
+    },
+    "LFO3": {
+      "curveData": {
+        "curveVals": [
+          0.4999999701976776,
+          0.4999999701976776,
+          0.4999999701976776
+        ],
+        "loopbackPointNum": 65,
+        "numPoints": 2,
+        "xVals": [
+          0.0,
+          0.5,
+          1.0
+        ],
+        "yVals": [
+          1.0,
+          0.0,
+          1.0
+        ]
+      },
+      "pathData": {},
+      "plainParams": {
+        "kParamDefaultMode": 0.0,
+        "kParamMode": "Free"
+      }
+    },
+    "LFO4": {
+      "curveData": {},
+      "pathData": {},
+      "plainParams": {
+        "kParamDefaultMode": 0.0,
+        "kParamMode": "Free"
+      }
+    },
+    "LFO5": {
+      "curveData": {},
+      "pathData": {},
+      "plainParams": {
+        "kParamDefaultMode": 0.0,
+        "kParamMode": "Free"
+      }
+    },
+    "LFO6": {
+      "curveData": {},
+      "pathData": {},
+      "plainParams": {
+        "kParamDefaultMode": 0.0,
+        "kParamMode": "Free"
+      }
+    },
+    "LFO7": {
+      "curveData": {},
+      "pathData": {},
+      "plainParams": {
+        "kParamDefaultMode": 0.0,
+        "kParamMode": "Free"
+      }
+    },
+    "LFO8": {
+      "curveData": {},
+      "pathData": {},
+      "plainParams": {
+        "kParamBeatSync": 0.0,
+        "kParamDefaultMode": 0.0,
+        "kParamDotted": 1.0,
+        "kParamRate": 0.10000069729266844,
+        "kParamRate10x": 1.0,
+        "kParamTriplets": 1.0,
+        "kParamType": "Lorenz"
+      }
+    },
+    "LFO9": {
+      "curveData": {},
+      "pathData": {},
+      "plainParams": {
+        "kParamBeatSync": 0.0,
+        "kParamDefaultMode": 0.0,
+        "kParamDotted": 1.0,
+        "kParamRate": 0.10000069729266844,
+        "kParamRate10x": 1.0,
+        "kParamTriplets": 1.0,
+        "kParamType": "Rossler"
+      }
+    },
+    "LFOPointModBus0": {
+      "plainParams": "default"
+    },
+    "LFOPointModBus1": {
+      "plainParams": "default"
+    },
+    "LFOPointModBus10": {
+      "plainParams": "default"
+    },
+    "LFOPointModBus11": {
+      "plainParams": "default"
+    },
+    "LFOPointModBus12": {
+      "plainParams": "default"
+    },
+    "LFOPointModBus13": {
+      "plainParams": "default"
+    },
+    "LFOPointModBus14": {
+      "plainParams": "default"
+    },
+    "LFOPointModBus15": {
+      "plainParams": "default"
+    },
+    "LFOPointModBus2": {
+      "plainParams": "default"
+    },
+    "LFOPointModBus3": {
+      "plainParams": "default"
+    },
+    "LFOPointModBus4": {
+      "plainParams": "default"
+    },
+    "LFOPointModBus5": {
+      "plainParams": "default"
+    },
+    "LFOPointModBus6": {
+      "plainParams": "default"
+    },
+    "LFOPointModBus7": {
+      "plainParams": "default"
+    },
+    "LFOPointModBus8": {
+      "plainParams": "default"
+    },
+    "LFOPointModBus9": {
+      "plainParams": "default"
+    },
+    "Macro0": {
+      "plainParams": "default"
+    },
+    "Macro1": {
+      "plainParams": "default"
+    },
+    "Macro2": {
+      "plainParams": "default"
+    },
+    "Macro3": {
+      "plainParams": "default"
+    },
+    "Macro4": {
+      "plainParams": "default"
+    },
+    "Macro5": {
+      "plainParams": "default"
+    },
+    "Macro6": {
+      "plainParams": "default"
+    },
+    "Macro7": {
+      "plainParams": "default"
+    },
+    "MidiClip0": {
+      "clip": {},
+      "plainParams": "default"
+    },
+    "MidiClip1": {
+      "clip": {},
+      "plainParams": "default"
+    },
+    "MidiClip10": {
+      "clip": {},
+      "plainParams": "default"
+    },
+    "MidiClip11": {
+      "clip": {},
+      "plainParams": "default"
+    },
+    "MidiClip2": {
+      "clip": {},
+      "plainParams": "default"
+    },
+    "MidiClip3": {
+      "clip": {},
+      "plainParams": "default"
+    },
+    "MidiClip4": {
+      "clip": {},
+      "plainParams": "default"
+    },
+    "MidiClip5": {
+      "clip": {},
+      "plainParams": "default"
+    },
+    "MidiClip6": {
+      "clip": {},
+      "plainParams": "default"
+    },
+    "MidiClip7": {
+      "clip": {},
+      "plainParams": "default"
+    },
+    "MidiClip8": {
+      "clip": {},
+      "plainParams": "default"
+    },
+    "MidiClip9": {
+      "clip": {},
+      "plainParams": "default"
+    },
+    "ModSlot0": {
+      "destModuleID": 0,
+      "destModuleParamID": 1,
+      "destModuleParamName": "kParamMasterTuning",
+      "destModuleTypeString": "Global",
+      "plainParams": {
+        "kParamAmount": -41.999995708465576,
+        "kParamBipolar": 1.0
+      },
+      "source": [
+        6,
+        0
+      ]
+    },
+    "ModSlot1": {
+      "destModuleID": 0,
+      "destModuleParamID": 3,
+      "destModuleParamName": "kParamFreq",
+      "destModuleTypeString": "VoiceFilter",
+      "plainParams": {
+        "kParamAmount": 44.99999284744263
+      },
+      "source": [
+        7,
+        0
+      ]
+    },
+    "ModSlot10": {
+      "plainParams": "default"
+    },
+    "ModSlot11": {
+      "plainParams": "default"
+    },
+    "ModSlot12": {
+      "plainParams": "default"
+    },
+    "ModSlot13": {
+      "plainParams": "default"
+    },
+    "ModSlot14": {
+      "plainParams": "default"
+    },
+    "ModSlot15": {
+      "plainParams": "default"
+    },
+    "ModSlot16": {
+      "plainParams": "default"
+    },
+    "ModSlot17": {
+      "plainParams": "default"
+    },
+    "ModSlot18": {
+      "plainParams": "default"
+    },
+    "ModSlot19": {
+      "plainParams": "default"
+    },
+    "ModSlot2": {
+      "destModuleID": 0,
+      "destModuleParamID": 6,
+      "destModuleParamName": "kParamTablePos",
+      "destModuleTypeString": "WTOsc",
+      "plainParams": {
+        "kParamAmount": 28.070175647735596
+      },
+      "source": [
+        16,
+        0
+      ]
+    },
+    "ModSlot20": {
+      "plainParams": "default"
+    },
+    "ModSlot21": {
+      "plainParams": "default"
+    },
+    "ModSlot22": {
+      "plainParams": "default"
+    },
+    "ModSlot23": {
+      "plainParams": "default"
+    },
+    "ModSlot24": {
+      "plainParams": "default"
+    },
+    "ModSlot25": {
+      "plainParams": "default"
+    },
+    "ModSlot26": {
+      "plainParams": "default"
+    },
+    "ModSlot27": {
+      "plainParams": "default"
+    },
+    "ModSlot28": {
+      "plainParams": "default"
+    },
+    "ModSlot29": {
+      "plainParams": "default"
+    },
+    "ModSlot3": {
+      "plainParams": "default"
+    },
+    "ModSlot30": {
+      "plainParams": "default"
+    },
+    "ModSlot31": {
+      "plainParams": "default"
+    },
+    "ModSlot32": {
+      "plainParams": "default"
+    },
+    "ModSlot33": {
+      "plainParams": "default"
+    },
+    "ModSlot34": {
+      "plainParams": "default"
+    },
+    "ModSlot35": {
+      "plainParams": "default"
+    },
+    "ModSlot36": {
+      "plainParams": "default"
+    },
+    "ModSlot37": {
+      "plainParams": "default"
+    },
+    "ModSlot38": {
+      "plainParams": "default"
+    },
+    "ModSlot39": {
+      "plainParams": "default"
+    },
+    "ModSlot4": {
+      "plainParams": "default"
+    },
+    "ModSlot40": {
+      "plainParams": "default"
+    },
+    "ModSlot41": {
+      "plainParams": "default"
+    },
+    "ModSlot42": {
+      "plainParams": "default"
+    },
+    "ModSlot43": {
+      "plainParams": "default"
+    },
+    "ModSlot44": {
+      "plainParams": "default"
+    },
+    "ModSlot45": {
+      "plainParams": "default"
+    },
+    "ModSlot46": {
+      "plainParams": "default"
+    },
+    "ModSlot47": {
+      "plainParams": "default"
+    },
+    "ModSlot48": {
+      "plainParams": "default"
+    },
+    "ModSlot49": {
+      "plainParams": "default"
+    },
+    "ModSlot5": {
+      "plainParams": "default"
+    },
+    "ModSlot50": {
+      "plainParams": "default"
+    },
+    "ModSlot51": {
+      "plainParams": "default"
+    },
+    "ModSlot52": {
+      "plainParams": "default"
+    },
+    "ModSlot53": {
+      "plainParams": "default"
+    },
+    "ModSlot54": {
+      "plainParams": "default"
+    },
+    "ModSlot55": {
+      "plainParams": "default"
+    },
+    "ModSlot56": {
+      "plainParams": "default"
+    },
+    "ModSlot57": {
+      "plainParams": "default"
+    },
+    "ModSlot58": {
+      "plainParams": "default"
+    },
+    "ModSlot59": {
+      "plainParams": "default"
+    },
+    "ModSlot6": {
+      "plainParams": "default"
+    },
+    "ModSlot60": {
+      "plainParams": "default"
+    },
+    "ModSlot61": {
+      "plainParams": "default"
+    },
+    "ModSlot62": {
+      "plainParams": "default"
+    },
+    "ModSlot63": {
+      "plainParams": "default"
+    },
+    "ModSlot7": {
+      "plainParams": "default"
+    },
+    "ModSlot8": {
+      "plainParams": "default"
+    },
+    "ModSlot9": {
+      "plainParams": "default"
+    },
+    "MultiSampleOsc": [
+      {
+        "kUIParamMultiSampleOverviewMouseTag": 0.0
+      },
+      {
+        "kUIParamMultiSampleOverviewMouseTag": 0.0
+      },
+      {
+        "kUIParamMultiSampleOverviewMouseTag": 0.0
+      }
+    ],
+    "Osc": [
+      {
+        "kUIParamAutoSyncSlicing": 0.0,
+        "kUIParamShowMarkerAnimations": 0.0,
+        "kUIParamZoomToStartEnd": 0.0
+      },
+      {
+        "kUIParamAutoSyncSlicing": 0.0,
+        "kUIParamShowMarkerAnimations": 0.0,
+        "kUIParamZoomToStartEnd": 0.0
+      },
+      {
+        "kUIParamAutoSyncSlicing": 0.0,
+        "kUIParamShowMarkerAnimations": 0.0,
+        "kUIParamZoomToStartEnd": 0.0
+      },
+      {
+        "kUIParamAutoSyncSlicing": 0.0,
+        "kUIParamShowMarkerAnimations": 0.0,
+        "kUIParamZoomToStartEnd": 0.0
+      },
+      {
+        "kUIParamAutoSyncSlicing": 0.0,
+        "kUIParamShowMarkerAnimations": 0.0,
+        "kUIParamZoomToStartEnd": 0.0
+      }
+    ],
+    "Oscillator0": {
+      "GranularOsc0": {
+        "plainParams": "default"
+      },
+      "MultiSampleOsc0": {
+        "plainParams": "default"
+      },
+      "SampleOsc0": {
+        "plainParams": "default"
+      },
+      "SpectralOsc0": {
+        "plainParams": "default"
+      },
+      "WTOsc0": {
+        "flex": {
+          "curveVals": [
+            0.4999999701976776,
+            0.4999999701976776
+          ],
+          "numPoints": 1,
+          "xVals": [
+            0.0,
+            1.0
+          ],
+          "yVals": [
+            1.0,
+            0.0
+          ]
+        },
+        "numChannels": 1,
+        "numFrames": 20480,
+        "plainParams": {
+          "kParamTablePos": 29.333333544433117
+        },
+        "relativePathToWT": "Analog/Jno.wav",
+        "sampleRate": 44100
+      },
+      "plainParams": {
+        "kParamOctave": -1.0
+      }
+    },
+    "Oscillator1": {
+      "GranularOsc1": {
+        "plainParams": "default"
+      },
+      "MultiSampleOsc1": {
+        "plainParams": "default"
+      },
+      "SampleOsc1": {
+        "plainParams": "default"
+      },
+      "SpectralOsc1": {
+        "plainParams": "default"
+      },
+      "WTOsc1": {
+        "flex": {
+          "curveVals": [
+            0.4999999701976776,
+            0.4999999701976776
+          ],
+          "numPoints": 1,
+          "xVals": [
+            0.0,
+            1.0
+          ],
+          "yVals": [
+            1.0,
+            0.0
+          ]
+        },
+        "plainParams": "default"
+      },
+      "plainParams": "default"
+    },
+    "Oscillator2": {
+      "GranularOsc2": {
+        "plainParams": "default"
+      },
+      "MultiSampleOsc2": {
+        "plainParams": "default"
+      },
+      "SampleOsc2": {
+        "plainParams": "default"
+      },
+      "SpectralOsc2": {
+        "plainParams": "default"
+      },
+      "WTOsc2": {
+        "flex": {},
+        "numChannels": 1,
+        "numFrames": 18432,
+        "plainParams": "default",
+        "relativePathToWT": "S2 Tables/Default Shapes.wav",
+        "sampleRate": 44100
+      },
+      "plainParams": "default"
+    },
+    "Oscillator3": {
+      "NoiseOsc3": {
+        "detuneFactor": 0.4758218478413068,
+        "numChannels": 1,
+        "numFrames": 264,
+        "plainParams": "default",
+        "relativePathToNoiseSample": "Attacks_Kick/XF_KikAtk_09.wav",
+        "sampleRate": 44100
+      },
+      "plainParams": "default"
+    },
+    "Oscillator4": {
+      "SubOsc4": {
+        "plainParams": {
+          "kParamShape": "kTriangle"
+        }
+      },
+      "plainParams": {
+        "kParamVolume": 0.5625
+      }
+    },
+    "PitchQuantizer0": {
+      "plainParams": "default",
+      "scale": [
+        0,
+        2,
+        0,
+        2,
+        0,
+        0,
+        2,
+        0,
+        2,
+        0,
+        2,
+        0
+      ],
+      "scaleName": "Major"
+    },
+    "RetriggerState0": {
+      "plainParams": "default"
+    },
+    "RoutingSlot0": {
+      "plainParams": "default"
+    },
+    "RoutingSlot1": {
+      "plainParams": "default"
+    },
+    "RoutingSlot2": {
+      "plainParams": "default"
+    },
+    "RoutingSlot3": {
+      "plainParams": "default"
+    },
+    "RoutingSlot4": {
+      "plainParams": "default"
+    },
+    "RoutingSlot5": {
+      "plainParams": "default"
+    },
+    "RoutingSlot6": {
+      "plainParams": "default"
+    },
+    "SerumGUI": {
+      "kUIParamShowKeyboard": 1.0,
+      "kUIParamShowMidiOut": 0.0
+    },
+    "SpectralOsc": [
+      {
+        "kUIParamDisplayXYInput": 0.0,
+        "kUIParamShowWaveformDisplay": 0.0
+      },
+      {
+        "kUIParamDisplayXYInput": 0.0,
+        "kUIParamShowWaveformDisplay": 0.0
+      },
+      {
+        "kUIParamDisplayXYInput": 0.0,
+        "kUIParamShowWaveformDisplay": 0.0
+      }
+    ],
+    "VoiceFilter0": {
+      "plainParams": {
+        "kParamEnable": 1.0,
+        "kParamFreq": 0.28070172667503357,
+        "kParamKeyTrack": 1.0,
+        "kParamReso": 38.94737362861633,
+        "kParamType": "B24"
+      }
+    },
+    "VoiceFilter1": {
+      "plainParams": "default"
+    },
+    "VoicePanel0": {
+      "displayName": "",
+      "plainParams": "default"
+    },
+    "WTOsc": [
+      {
+        "kUIParamWTOverviewMouseTag": 1.0
+      },
+      {
+        "kUIParamWTOverviewMouseTag": 1.0
+      },
+      {
+        "kUIParamWTOverviewMouseTag": 0.0
+      }
+    ],
+    "arpBankDisplayName": "",
+    "clipBankDisplayName": "",
+    "fileType": "SerumPreset",
+    "lockOversampling": false,
+    "lockTuning": false,
+    "mpeConfig": 0,
+    "mpeEnabled": true,
+    "mpePitchBendRange": 48,
+    "presetAuthor": "endeavour",
+    "presetDescription": "facebook.com/endeavourtrance",
+    "presetName": "Psy_Squelch_Template",
+    "product": "Serum2",
+    "productVersion": "2.0.16",
+    "scalars": {
+      "note": {
+        "curveVals": [
+          0.4999999701976776,
+          0.4999999701976776
+        ],
+        "legato": false,
+        "numPoints": 1,
+        "xVals": [
+          0.0,
+          1.0
+        ],
+        "yVals": [
+          1.0,
+          0.0
+        ]
+      },
+      "velo": {
+        "curveVals": [
+          0.4999999701976776,
+          0.4999999701976776
+        ],
+        "legato": false,
+        "numPoints": 1,
+        "xVals": [
+          0.0,
+          1.0
+        ],
+        "yVals": [
+          1.0,
+          0.0
+        ]
+      }
+    },
+    "tags": [
+      "Wavetable",
+      "Poly"
+    ],
+    "url": "https://xferrecords.com/",
+    "vendor": "Xfer Records",
+    "version": 6.0
+  }
+}

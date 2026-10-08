@@ -10,7 +10,7 @@ Control Ableton Live through MCP tools. This project has two parts:
 ## Key Conventions
 
 - **Track indexing**: 0+ for regular tracks, `-1` for master, `-2`/`-3` for return A/B
-- **Parameter values**: Always normalized 0.0–1.0, regardless of actual range
+- **Live parameter writes**: Normalized 0.0–1.0; offline Serum preset values use their native file representation, not this normalization
 - **Clip positions**: In beats (4.0 = 1 bar at 4/4)
 - **MIDI notes**: pitch 0–127 (C3=48, C4=60), velocity 0–127
 - **Arrangement editing** — direct audio/MIDI clip insertion is supported; use record_arrangement for session-based recording and keep LOM limits in mind
@@ -18,7 +18,22 @@ Control Ableton Live through MCP tools. This project has two parts:
 
 ## Music Production Skills
 
-Claude discovers 20 skills in .claude/skills/; .agents/skills/ is the byte-for-byte mirror for other MCP-capable agents.
+Claude discovers 21 skills in .claude/skills/; .agents/skills/ is the byte-for-byte mirror for other MCP-capable agents.
+
+For Serum 2/Omnisphere patch creation or improvement ideas, use
+[synth-sound-design](.claude/skills/synth-sound-design/SKILL.md) and
+`get_synth_sound_design_guide`. Follow AGENTS.md's context inspection,
+suggestion-only behavior and both synths' mandatory final-chat manual handoffs.
+For new Serum presets, actually write a separate `.SerumPreset` via the offline
+tools and the `serum-presets` guide's `new-preset-design` / `module-editing`
+sections. Implement substantial style-defining source, filter, envelope,
+modulation, FX and voicing changes; missing Configure controls do not block file
+creation. File-only requests need no Live connection. Verify decoded edits and
+report loading/auditioning separately.
+For existing Serum transformations (“make this preset faster/darker/bouncy”),
+automatically follow `serum-presets/existing-preset-edits`: unpack the existing
+file/current export to complete JSON, edit separate JSON, repack a separate preset
+and compare decoded state. Preserve the original and unrelated patch settings.
 
 See [SKILL_AUTHORING_GUIDE.md](SKILL_AUTHORING_GUIDE.md) for creating new skills.
 

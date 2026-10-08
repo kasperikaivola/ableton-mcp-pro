@@ -1,0 +1,215 @@
+{
+  "checks": [
+    {
+      "parameter": "A Enable",
+      "expected_normalized": 1.0,
+      "actual_normalized": 1,
+      "display": "On",
+      "passed": true
+    },
+    {
+      "parameter": "A Octave",
+      "expected_normalized": 0.25,
+      "actual_normalized": 0.25,
+      "display": "-2 oct",
+      "passed": true
+    },
+    {
+      "parameter": "A Level",
+      "expected_normalized": 0.8903508186340332,
+      "actual_normalized": 0.8903508186340332,
+      "display": " 89% [-2.0 dB]",
+      "passed": true
+    },
+    {
+      "parameter": "B Enable",
+      "expected_normalized": 1.0,
+      "actual_normalized": 1,
+      "display": "On",
+      "passed": true
+    },
+    {
+      "parameter": "B Octave",
+      "expected_normalized": 0.25,
+      "actual_normalized": 0.25,
+      "display": "-2 oct",
+      "passed": true
+    },
+    {
+      "parameter": "B Level",
+      "expected_normalized": 0.721919596195221,
+      "actual_normalized": 0.721919596195221,
+      "display": " 72% [-5.7 dB]",
+      "passed": true
+    },
+    {
+      "parameter": "Sub Enable",
+      "expected_normalized": 0.0,
+      "actual_normalized": 0,
+      "display": "Off",
+      "passed": true
+    },
+    {
+      "parameter": "Sub Octave",
+      "expected_normalized": 0.375,
+      "actual_normalized": 0.375,
+      "display": "-1 oct",
+      "passed": true
+    },
+    {
+      "parameter": "Sub Level",
+      "expected_normalized": 0.6885964870452881,
+      "actual_normalized": 0.6885964870452881,
+      "display": " 69% [-6.5 dB]",
+      "passed": true
+    },
+    {
+      "parameter": "Env 1 Attack",
+      "expected_normalized": 0.11221012473106383,
+      "actual_normalized": 0.11221012473106384,
+      "display": "0.6 ms",
+      "passed": true
+    },
+    {
+      "parameter": "Env 1 Hold",
+      "expected_normalized": 0.3028886020183563,
+      "actual_normalized": 0.3028886020183563,
+      "display": " 82 ms",
+      "passed": true
+    },
+    {
+      "parameter": "Env 1 Decay",
+      "expected_normalized": 0.0,
+      "actual_normalized": 0,
+      "display": "0.0 ms",
+      "passed": true
+    },
+    {
+      "parameter": "Env 1 Release",
+      "expected_normalized": 0.2586803734302521,
+      "actual_normalized": 0.2586803734302521,
+      "display": " 37 ms",
+      "passed": true
+    },
+    {
+      "parameter": "Env 1 Sustain",
+      "expected_normalized": 1.0,
+      "actual_normalized": 1,
+      "display": "0.0 dB",
+      "passed": true
+    },
+    {
+      "parameter": "Env 1 Dec Curve",
+      "expected_normalized": 0.6660000085830688,
+      "actual_normalized": 0.6660000085830688,
+      "display": "67 %",
+      "passed": true
+    },
+    {
+      "parameter": "Env 1 Rel Curve",
+      "expected_normalized": 0.6954119205474854,
+      "actual_normalized": 0.6954119205474854,
+      "display": "70 %",
+      "passed": true
+    },
+    {
+      "parameter": "Env 2 Attack",
+      "expected_normalized": 0.10999999940395354,
+      "actual_normalized": 0.10999999940395355,
+      "display": "0.5 ms",
+      "passed": true
+    },
+    {
+      "parameter": "Env 2 Hold",
+      "expected_normalized": 0.0,
+      "actual_normalized": 0,
+      "display": "0.0 ms",
+      "passed": true
+    },
+    {
+      "parameter": "Env 2 Decay",
+      "expected_normalized": 0.44736841320991516,
+      "actual_normalized": 0.44736841320991516,
+      "display": "573 ms",
+      "passed": true
+    },
+    {
+      "parameter": "Env 2 Release",
+      "expected_normalized": 0.0,
+      "actual_normalized": 0,
+      "display": "0.0 ms",
+      "passed": true
+    },
+    {
+      "parameter": "Env 2 Sustain",
+      "expected_normalized": 0.0,
+      "actual_normalized": 0,
+      "display": "--",
+      "passed": true
+    },
+    {
+      "parameter": "Env 2 Dec Curve",
+      "expected_normalized": 0.6660000085830688,
+      "actual_normalized": 0.6660000085830688,
+      "display": "67 %",
+      "passed": true
+    },
+    {
+      "parameter": "Env 2 Rel Curve",
+      "expected_normalized": 0.6660000085830688,
+      "actual_normalized": 0.6660000085830688,
+      "display": "67 %",
+      "passed": true
+    },
+    {
+      "parameter": "Filter 1 On",
+      "expected_normalized": 1.0,
+      "actual_normalized": 1,
+      "display": "On",
+      "passed": true
+    },
+    {
+      "parameter": "Filter 1 Freq",
+      "expected_normalized": 0.5964912176132202,
+      "actual_normalized": 0.5964912176132202,
+      "display": "  911 Hz",
+      "passed": true
+    },
+    {
+      "parameter": "Filter 1 Res",
+      "expected_normalized": 0.10000000149011612,
+      "actual_normalized": 0.10000000149011612,
+      "display": "10 %",
+      "passed": true
+    },
+    {
+      "parameter": "Filter 1 Var",
+      "expected_normalized": 0.7587719559669495,
+      "actual_normalized": 0.7587719559669495,
+      "display": "76 %",
+      "passed": true
+    },
+    {
+      "parameter": "Mono Toggle",
+      "expected_normalized": 1.0,
+      "actual_normalized": 1,
+      "display": "On",
+      "passed": true
+    },
+    {
+      "parameter": "Legato",
+      "expected_normalized": 1.0,
+      "actual_normalized": 1,
+      "display": "On",
+      "passed": true
+    }
+  ],
+  "passed": true,
+  "source_unchanged": true,
+  "template_unchanged": true,
+  "limitations": [
+    "No audio audition",
+    "Live FX/matrix/source-name state not fully read back",
+    "Same-build 2.0.16 prototype only"
+  ]
+}

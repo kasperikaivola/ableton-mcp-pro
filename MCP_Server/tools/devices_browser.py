@@ -7,12 +7,27 @@ from ..runtime import get_ableton_connection, logger, mcp
 
 
 _MANUAL_SETTINGS_HANDOFF = (
+    "For new Serum 2 sounds, missing Configure controls do not block offline preset "
+    "creation: read get_synth_sound_design_guide(synth='serum-presets', "
+    "section='workflow'), then new-preset-design and module-editing. Design and write "
+    "a separate .SerumPreset covering sources, filters, envelopes, modulation, FX "
+    "and voicing; distinguish written file state from loaded-instance state. "
+    "Group verified output-file settings as encoded in output; not loaded, with "
+    "a load/verification step instead of redundant manual recreation. "
+    "For existing Serum transformations such as make it faster/darker/bouncy, "
+    "read serum-presets/existing-preset-edits: unpack the current exported preset "
+    "to complete JSON, edit separate JSON and repack a separate preset. Preserve "
+    "the original and unrelated state; a library file may omit unsaved changes. "
     "When designing/editing this plug-in, always list every intended setting not applied "
     "through MCP in the final chat, grouped by track and device. For Serum 2, include a "
     "'Serum 2 — manual settings' section covering wavetable selections, FX bus/order and "
     "values, and other missing controls/modulation. Give exact desired UI values/selections "
     "and units, labelled 'not applied — set manually'. These are instructions, not a "
-    "readback of current unmapped values. Compare the intended patch with this instance's "
+    "readback of current unmapped values. For Omnisphere include an 'Omnisphere — manual "
+    "settings' section with version, Part, Layer and FX rack identity. Read "
+    "get_synth_sound_design_guide for Serum 2/Omnisphere workflows, controls and recipes "
+    "before designing a patch or suggesting improvements. Suggestions alone do not "
+    "authorize edits. Compare the intended patch with this instance's "
     "unfiltered configured inventory; do not assume every wavetable/FX control is missing. "
     "Do not guess opaque host labels or claim wavetable position selects a table. Mark "
     "unverifiable names/values unknown, and distinguish proposed choices from readback. "
@@ -50,6 +65,12 @@ def get_device_parameters(
     equate wavetable position with table selection. Unknown values stay unknown;
     static manual values do not implement time-varying automation. State none
     required only when the intended changes were verified.
+
+    For Serum 2 / Omnisphere sound design and improvement ideas, first read
+    get_synth_sound_design_guide. Omnisphere requires an equivalent final-chat
+    manual-settings handoff identifying version, Part, Layer and FX rack.
+    For new Serum presets use the offline serum-presets creation workflow for
+    settings missing here; actually generate the file, then report loading status.
 
     Parameters:
     - track_index: Track index (-1 master, -2/-3 returns)

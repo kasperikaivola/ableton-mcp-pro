@@ -1,0 +1,262 @@
+{
+  "source_sha256": "21e4888bea6035e498f81b4a1a4a15bb9c58c29d5519103038ef5b91439a3e6b",
+  "output_sha256": "8f0cb999dd0003804ba22cd26556a3c5c650cf3cd10cb24253814f29d4f27d93",
+  "changed_modules": [
+    "Oscillator0",
+    "Oscillator1",
+    "Oscillator2",
+    "Oscillator3",
+    "Oscillator4",
+    "RoutingSlot0",
+    "RoutingSlot1",
+    "RoutingSlot2",
+    "VoiceFilter0",
+    "VoiceFilter1",
+    "Env0",
+    "Env1",
+    "Env2",
+    "Env3",
+    "LFO0",
+    "LFO1",
+    "LFO2",
+    "LFO3",
+    "LFO4",
+    "LFO5",
+    "LFO6",
+    "LFO7",
+    "LFO8",
+    "LFO9",
+    "ModSlot0",
+    "ModSlot1",
+    "ModSlot2",
+    "ModSlot3",
+    "ModSlot4",
+    "ModSlot5",
+    "ModSlot6",
+    "ModSlot7",
+    "ModSlot8",
+    "ModSlot9",
+    "ModSlot10",
+    "ModSlot11",
+    "ModSlot12",
+    "ModSlot13",
+    "ModSlot14",
+    "ModSlot15",
+    "ModSlot16",
+    "ModSlot17",
+    "ModSlot18",
+    "ModSlot19",
+    "ModSlot20",
+    "ModSlot21",
+    "ModSlot22",
+    "ModSlot23",
+    "ModSlot24",
+    "ModSlot25",
+    "ModSlot26",
+    "ModSlot27",
+    "ModSlot28",
+    "ModSlot29",
+    "ModSlot30",
+    "ModSlot31",
+    "ModSlot32",
+    "ModSlot33",
+    "ModSlot34",
+    "ModSlot35",
+    "ModSlot36",
+    "ModSlot37",
+    "ModSlot38",
+    "ModSlot39",
+    "ModSlot40",
+    "ModSlot41",
+    "ModSlot42",
+    "ModSlot43",
+    "ModSlot44",
+    "ModSlot45",
+    "ModSlot46",
+    "ModSlot47",
+    "ModSlot48",
+    "ModSlot49",
+    "ModSlot50",
+    "ModSlot51",
+    "ModSlot52",
+    "ModSlot53",
+    "ModSlot54",
+    "ModSlot55",
+    "ModSlot56",
+    "ModSlot57",
+    "ModSlot58",
+    "ModSlot59",
+    "ModSlot60",
+    "ModSlot61",
+    "ModSlot62",
+    "ModSlot63",
+    "FXRack0",
+    "FXRack1",
+    "FXRack2",
+    "Global0",
+    "Arp0",
+    "ClipPlayer0"
+  ],
+  "modulation_routes": [
+    {
+      "source": [
+        3,
+        0
+      ],
+      "destModuleTypeString": "VoiceFilter",
+      "destModuleID": 0,
+      "destModuleParamName": "kParamFreq",
+      "destModuleParamID": 3,
+      "plainParams": {
+        "kParamAmount": 36.0,
+        "kParamBipolar": 0.0,
+        "kParamOut": 100.0
+      }
+    },
+    {
+      "source": [
+        6,
+        0
+      ],
+      "destModuleTypeString": "VoiceFilter",
+      "destModuleID": 0,
+      "destModuleParamName": "kParamFreq",
+      "destModuleParamID": 3,
+      "plainParams": {
+        "kParamAmount": 22.0,
+        "kParamBipolar": 0.0,
+        "kParamOut": 100.0
+      }
+    },
+    {
+      "source": [
+        7,
+        0
+      ],
+      "destModuleTypeString": "WTOsc",
+      "destModuleID": 0,
+      "destModuleParamName": "kParamTablePos",
+      "destModuleParamID": 6,
+      "plainParams": {
+        "kParamAmount": 38.0,
+        "kParamBipolar": 1.0,
+        "kParamOut": 100.0
+      }
+    },
+    {
+      "source": [
+        8,
+        0
+      ],
+      "destModuleTypeString": "WTOsc",
+      "destModuleID": 0,
+      "destModuleParamName": "kParamWarp",
+      "destModuleParamID": 0,
+      "plainParams": {
+        "kParamAmount": 24.0,
+        "kParamBipolar": 0.0,
+        "kParamOut": 100.0
+      }
+    },
+    {
+      "source": [
+        9,
+        0
+      ],
+      "destModuleTypeString": "VoiceFilter",
+      "destModuleID": 0,
+      "destModuleParamName": "kParamReso",
+      "destModuleParamID": 4,
+      "plainParams": {
+        "kParamAmount": 9.0,
+        "kParamBipolar": 1.0,
+        "kParamOut": 100.0
+      }
+    },
+    {
+      "source": [
+        9,
+        0
+      ],
+      "destModuleTypeString": "WTOsc",
+      "destModuleID": 2,
+      "destModuleParamName": "kParamTablePos",
+      "destModuleParamID": 6,
+      "plainParams": {
+        "kParamAmount": 24.0,
+        "kParamBipolar": 1.0,
+        "kParamOut": 100.0
+      }
+    },
+    {
+      "source": [
+        4,
+        0
+      ],
+      "destModuleTypeString": "Oscillator",
+      "destModuleID": 2,
+      "destModuleParamName": "kParamVolume",
+      "destModuleParamID": 1,
+      "plainParams": {
+        "kParamAmount": -12.0,
+        "kParamBipolar": 0.0,
+        "kParamOut": 100.0
+      }
+    },
+    {
+      "source": [
+        6,
+        0
+      ],
+      "destModuleTypeString": "Global",
+      "destModuleID": 0,
+      "destModuleParamName": "kParamMasterTuning",
+      "destModuleParamID": 1,
+      "plainParams": {
+        "kParamAmount": 2.0,
+        "kParamBipolar": 1.0,
+        "kParamOut": 100.0
+      }
+    },
+    {
+      "source": [
+        1,
+        0
+      ],
+      "destModuleTypeString": "VoiceFilter",
+      "destModuleID": 0,
+      "destModuleParamName": "kParamFreq",
+      "destModuleParamID": 3,
+      "plainParams": {
+        "kParamAmount": 12.0,
+        "kParamBipolar": 0.0,
+        "kParamOut": 100.0
+      }
+    },
+    {
+      "source": [
+        1,
+        0
+      ],
+      "destModuleTypeString": "WTOsc",
+      "destModuleID": 0,
+      "destModuleParamName": "kParamWarp",
+      "destModuleParamID": 0,
+      "plainParams": {
+        "kParamAmount": 16.0,
+        "kParamBipolar": 0.0,
+        "kParamOut": 100.0
+      }
+    }
+  ],
+  "verification_pending": [
+    "Live load",
+    "wavetable names/frames",
+    "FM amount UI conversion",
+    "WT position UI conversion",
+    "LFO curves/modes/rates",
+    "FX controls and output level",
+    "audition"
+  ],
+  "mapping_reference": "https://github.com/btesser/serum2vital/blob/main/docs/FORMATS.md"
+}

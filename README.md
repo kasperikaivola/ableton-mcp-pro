@@ -29,6 +29,9 @@ This fork adds significant capabilities beyond the original:
 - **Simpler sample control** — Read/set sample windows in integer sample frames; replace samples on Live 12.4+
 - **Device control** — Get/set any device parameter (including configured VST knobs by name, with inferred groups for Serum-style prefixes), batch updates, delete devices
 - **Browser integration** — Browse and load instruments, effects, and presets by URI
+- **Synth sound-design references** — Offline Serum 2/Omnisphere control guides, context-aware patch workflows, recipes and improvement ideas through `get_synth_sound_design_guide`
+- **Complete Serum 2 preset files** — Bounded inspection/search, guarded edits, full JSON extraction/repackaging and decoded comparison, preserving embedded audio and unknown state. Offline file edits; loading into Serum remains manual.
+- **Nested asset discovery** — `search_audio_assets` finds presets/audio under `G:/AudioAssets` with recursive case-insensitive wildcards, bounded scans and paginated full paths.
 - **Transport controls** — Tempo, time signature, metronome, record mode
 - **Undo/redo** support
 
@@ -54,7 +57,62 @@ server-side reminders; no Live restart or Remote Script deployment is needed.
 
 ## Music Production Skills
 
-This project supports MCP-capable agents and includes 20 production skills for genre-specific workflows — from sound design to pattern programming to mixing. Claude discovers `.claude/skills/`; Codex discovers `.agents/skills/`. Both trees must contain exact byte-for-byte mirrors, checked with `python tools/check_skill_mirrors.py`.
+### Serum 2 and Omnisphere sound design
+
+Ask for a new sound, such as *"Add a mystical FX synth to make this track fuller"*,
+or for ideas, such as *"Track X sounds bland; suggest improvements"*. Agents inspect
+song/track context, choose the instrument or retain the existing one, and provide
+a detailed recipe in chat. New-sound requests use existing track/browser tools;
+suggestion-only requests preserve the existing patch. Verified parameter writes
+and exact manual UI settings are reported separately for both synths.
+
+For *"Create a Serum 2 preset in this style"*, agents should actually write a new
+`.SerumPreset` using the offline tools, with deliberate source/wavetable,
+sub/noise, filter/routing, envelope/LFO, matrix, FX and voicing decisions. Missing
+Configure controls do not block file creation. Read `synth="serum-presets"`
+sections `workflow`, `new-preset-design` and `module-editing` for the creation
+checklist and fixture-derived editing patterns. File-only creation works without
+Live; decoded file verification and live loading/auditioning remain separate.
+
+*"Make this preset faster/darker/bouncy"* also requests actual edits. Agents use
+`serum-presets/existing-preset-edits` to unpack the existing file to complete JSON,
+edit a separate JSON and repack a separate `.SerumPreset`, preserving the original
+and unrelated settings. A current export is needed when editing unsaved live
+state; file edits do not automatically update the loaded instrument.
+
+The `serum-presets/complete-state-recipes` guide covers FX blocks/order/controls,
+matrix/performance routes, wavetable selection/assets, oscillator modes, curves,
+envelopes/LFOs, sub/noise, filters, voicing and other decoded modules. Guarded
+`copy` operations in `edit_serum_preset` transfer complete reference subtrees
+directly from disk, including large embedded data, without chat previews.
+File editing/repackaging and verification inside the loaded synth are distinct.
+
+`get_synth_sound_design_guide(synth="overview", section="workflow")` starts the
+workflow. Choose `serum2` or `omnisphere`; `section="index"` lists sections and
+`section="all"` retrieves the full control reference and recipes. The tool is
+read-only and works offline without Live. References ship with the MCP server:
+
+- [Workflow, completeness checklist and chat handoff](MCP_Server/synth_guides/overview.md)
+- [Serum 2 control reference](MCP_Server/synth_guides/serum2.md)
+- [Omnisphere control reference](MCP_Server/synth_guides/omnisphere.md)
+- [Serum preset file tools and editing workflow](MCP_Server/synth_guides/serum-presets.md)
+
+The references cover synthesis, routing, modulation, FX, performance and saving;
+live parameter reads cannot reveal unsaved hidden controls or hear a patch.
+Offline Serum tools can inspect and edit complete exported preset state.
+Installed assets and exact
+version-specific labels must be confirmed. Serum uses its official versioned
+manual; Omnisphere includes explicit limits where modern vendor documentation
+could not be accessed, with links for current-build confirmation. These are
+original agent guides, not bundled copies of the vendor manuals.
+
+**Reload the MCP server/client connection** to discover the tool and updated
+reminders. No Remote Script deployment or Live restart is required for this
+server-side feature. Existing synth instances still require their own Configure
+inventory before live writes. Use offline preset creation for hidden Serum state;
+loading and genuinely unresolved controls remain explicit handoff steps.
+
+This project supports MCP-capable agents and includes 21 production skills for genre-specific workflows — from sound design to pattern programming to mixing. Claude discovers `.claude/skills/`; Codex discovers `.agents/skills/`. Both trees must contain exact byte-for-byte mirrors, checked with `python tools/check_skill_mirrors.py`.
 
 ### Available Skills
 
@@ -66,6 +124,7 @@ This project supports MCP-capable agents and includes 20 production skills for g
 | **Bass Music** | [acid-bass](.claude/skills/acid-bass/SKILL.md) — 303-style squelch with accent, slide, and distortion<br>[growl-bass](.claude/skills/growl-bass/SKILL.md) — FM synthesis growl with macro control and formant filters<br>[reese-bass](.claude/skills/reese-bass/SKILL.md) — detuned saw phasing with notch filter movement |
 | **Synth & Ambient** | [supersaw-chords](.claude/skills/supersaw-chords/SKILL.md) — Wavetable unison patches with mono/stereo layering<br>[ethereal-pads](.claude/skills/ethereal-pads/SKILL.md) — split-voice chord layers with drone notes and noise<br>[ambient](.claude/skills/ambient/SKILL.md) — reverb-as-sound-design with granular textures<br>[synthwave](.claude/skills/synthwave/SKILL.md) — gated reverb, arps, retro bass and leads |
 | **Production** | [mixing-guide](.claude/skills/mixing-guide/SKILL.md) — systematic mixing workflow with master chain<br>[track-arrangement](.claude/skills/track-arrangement/SKILL.md) — loop-to-full-track with genre-specific notes<br>[drum-swing](.claude/skills/drum-swing/SKILL.md) — MPC swing percentages, humanization, groove theory |
+| **VST sound design** | [synth-sound-design](.agents/skills/synth-sound-design/SKILL.md) — Serum 2/Omnisphere new patches and existing-patch suggestions with detailed manual settings |
 
 ### Using Skills
 
@@ -75,6 +134,8 @@ Skills activate automatically based on what you ask. Examples:
 - *"Add an acid bassline"* → triggers acid-bass
 - *"Let's mix this track"* → triggers mixing-guide
 - *"Make some dreamy pads"* → triggers ethereal-pads
+- *"Add a mystical FX synth to make this track fuller"* → triggers synth-sound-design
+- *"Track X sounds bland; suggest improvements"* → read-only synth-sound-design suggestions
 
 Skills can also be combined — ask for "techno drums and bass" and Claude will use both techno-drums and techno-bass skills together.
 
