@@ -1,9 +1,11 @@
 ---
 name: track-arrangement
-description: Turn an 8-bar loop into a full arranged track. Use when the user asks to arrange a track, build a full song, create an arrangement, or go from loop to full track.
+description: Turn an 8-bar loop into a full arranged track. Use when the user asks to arrange a track, build a full song, create an arrangement, or go from loop to full track. A single drop, breakdown, interlude, buildup, intro, or outro uses arrangement-sections.
 ---
 
 # Loop to Full Track Arrangement
+
+One section in the current timeline uses arrangement-sections. This skill builds the whole song from a loop.
 
 ## Philosophy
 - Don't overthink arrangement — use your ears

@@ -326,8 +326,10 @@ groups from names, accepts `query`, and for Serum includes `coverage.present` /
 sets whatever names exist and lists the rest in `skipped`. After Configure, save
 **Default Configuration** or an `.adg` rack so new instances keep the list.
 
-`set_plugin_preset` is the VST host program bank (`selected_preset_index`), not
-Serum `.serumpreset` files. VST3 banks are often empty.
+`load_plugin_preset` publishes a new same-build `.vstpreset` from a plugin
+adapter and loads that browser item. Serum 2 is the first adapter. Paths live
+in `userconfig.json`. `set_plugin_preset` is the VST host program bank
+(`selected_preset_index`), not a `.SerumPreset` loader. VST3 banks are often empty.
 
 ### Normalized Values
 

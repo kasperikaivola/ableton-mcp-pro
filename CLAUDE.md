@@ -18,18 +18,20 @@ Control Ableton Live through MCP tools. This project has two parts:
 
 ## Music Production Skills
 
-Claude discovers 21 skills in .claude/skills/; .agents/skills/ is the byte-for-byte mirror for other MCP-capable agents.
+Claude discovers 22 skills in .claude/skills/; .agents/skills/ is the byte-for-byte mirror for other MCP-capable agents.
 
 For Serum 2/Omnisphere patch creation or improvement ideas, use
 [synth-sound-design](.claude/skills/synth-sound-design/SKILL.md) and
 `get_synth_sound_design_guide`. Follow AGENTS.md's context inspection,
 suggestion-only behavior and both synths' mandatory final-chat manual handoffs.
-For new Serum presets, actually write a separate `.SerumPreset` via the offline
+For new Serum presets, write an entirely new `.SerumPreset` via the offline
 tools and the `serum-presets` guide's `new-preset-design` / `module-editing`
-sections. Implement substantial style-defining source, filter, envelope,
-modulation, FX and voicing changes; missing Configure controls do not block file
-creation. File-only requests need no Live connection. Verify decoded edits and
-report loading/auditioning separately.
+sections. One or two parameters changed from a template is not a new preset.
+Implement style-defining source, filter, envelope, modulation, FX and voicing
+changes; missing Configure controls do not block file creation. With the Remote
+Script connected, `load_plugin_preset` inserts Serum 2 with that preset. A
+file-only request needs no Live connection. Verify decoded edits, and report
+the load separately from auditioning.
 For existing Serum transformations (“make this preset faster/darker/bouncy”),
 automatically follow `serum-presets/existing-preset-edits`: unpack the existing
 file/current export to complete JSON, edit separate JSON, repack a separate preset

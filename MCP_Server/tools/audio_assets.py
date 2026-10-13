@@ -10,6 +10,7 @@ import time
 from mcp.server.fastmcp import Context
 
 from ..runtime import mcp
+from ..userconfig import asset_library_path
 
 
 def _matcher(pattern):
@@ -123,11 +124,12 @@ def _search(pattern, root_path, offset, limit, max_entries):
 
 @mcp.tool()
 def search_audio_assets(ctx: Context, pattern: str = "*.SerumPreset",
-                        root_path: str = "G:/AudioAssets", offset: int = 0,
+                        root_path: str | None = None, offset: int = 0,
                         limit: int = 30, max_entries: int = 100000) -> str:
     """Find nested presets/audio files by case-insensitive wildcard on the server.
 
-    Default library G:/AudioAssets. Filename patterns match recursively at all
+    Default library is userconfig.json asset_library_path, or G:/AudioAssets
+    when that file is missing. Filename patterns match recursively at all
     depths: *pad*.SerumPreset, *init*.SerumPreset, *atmos*.wav, *.fxp.
     Path patterns match relative folders: **/Serum*/**/*.SerumPreset; * and ?
     stay within a segment, ** matches zero or more folders, [] matches characters.
@@ -139,6 +141,8 @@ def search_audio_assets(ctx: Context, pattern: str = "*.SerumPreset",
     Symlinks/junctions are excluded. No index; pagination may shift during changes.
     """
     try:
+        if not root_path:
+            root_path = asset_library_path()
         return json.dumps(_search(pattern, root_path, offset, limit, max_entries), ensure_ascii=False)
     except Exception as exc:
         return json.dumps({"error": str(exc)[:1000]}, ensure_ascii=False)

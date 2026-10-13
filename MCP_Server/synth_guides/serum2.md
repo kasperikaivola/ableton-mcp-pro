@@ -307,8 +307,9 @@ requested. Save any useful FX rack/module presets separately if desired.
 User-saved defaults can change new modules, so record a baseline rather than
 assuming factory settings. Live Configure mappings should be saved with a
 confirmed default configuration or rack if future instances need them.
-`set_plugin_preset` is host program selection, not a general .serumpreset loader.
-These save/embed/configuration steps remain manual unless actually verified.
+`load_plugin_preset` inserts Serum 2 with a `.SerumPreset` by publishing a new
+same-build `.vstpreset`. `set_plugin_preset` is host program selection, not that
+loader. Saving inside Serum's own menu remains manual unless a tool reports it.
 
 ## Sources
 

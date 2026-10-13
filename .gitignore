@@ -52,3 +52,5 @@ logs/
 *.adg
 *.adv
 *.asd
+
+userconfig.json

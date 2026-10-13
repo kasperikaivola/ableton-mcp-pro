@@ -84,34 +84,37 @@ State role, register, rhythmic density, width and how it avoids existing parts.
 
 ### New track procedure
 
-1. Find a loadable Serum 2/Omnisphere browser item or a user-confirmed rack/preset
-   using `get_browser_tree` and `get_browser_items_at_path`. Follow returned paths
-   and URIs, including Places/user folders as appropriate. Do not fabricate a
-   plug-in URI or assume `insert_device` accepts VST names; it is for native Live
-   devices. Browser loading requires a backend that actually exposes it; the
-   Max backend has a documented browser limitation. If blocked, provide manual
-   loading steps and accurately report what was created.
-2. `create_midi_track(index=-1)`, reread the session to identify the new track,
-   and name it for the role, e.g. `FX — Mystic Halo`. Avoid changing global tempo,
-   playback, existing clip contents or unrelated routing.
-3. `load_instrument_or_effect(track_index, uri)`; `get_track_info` to verify the
-   resulting instrument, not just an accepted browser-load message. If loading
-   fails, stop dependent writes; keep and report the new empty track for recovery.
-4. Read the new instance's unfiltered parameter inventory. Establish its actual
-   baseline; do not assume a new instance loads Init rather than a saved default.
-   If initialization is needed, include it as the first manual step unless a
-   reliable supported preset operation was verified.
-5. Design the complete target patch using the checklist. Apply only settings
-   with a verified mapping and a defensible normalized value. Recheck display
-   values after writes. Log skipped/failed settings in the final handoff.
-   For Serum 2, implement the full design in a separate preset with the offline
-   workflow rather than restricting it to Configure knobs. Load that output
-   before any live adjustments that loading would otherwise replace; verify
-   live state separately. If loading is unavailable, still deliver the file.
-6. Add an audition clip only when useful to the requested playable addition;
-   infer musical material from reliable notes or give a pitch-neutral FX idea.
-   Keep it on the new track and avoid launching it without a reason to change
-   transport. Never describe a track with pending manual settings as finished.
+For a new Serum 2 preset, design the file first, then let `load_plugin_preset`
+create the track and insert the instrument. Do not also browser-load a second
+Serum.
+
+1. Read `get_user_config`. Start from `plugins.serum2.preset_template`, or
+   another existing preset when one is a better architecture. Write an entirely
+   new `.SerumPreset` under `generated_presets_path`. One or two parameters
+   changed from the baseline is not a new preset.
+2. `load_plugin_preset(plugin_id="serum2", source_path=...)`. Omit `track_index`
+   for a new MIDI track named from the preset, or pass `track_name`. If Live or
+   the Remote Script browser is unavailable, keep the file and say the load did
+   not happen. `loaded: true` is the device-list check, not an audition.
+3. Read the new instance's unfiltered parameter inventory before any live knob
+   writes. Those writes must not fight the preset that was just loaded.
+4. Add an audition clip only when the request asked for a melody or other part.
+   Keep it on that track. Avoid casual transport or global tempo changes.
+
+For Omnisphere, or a Serum request that is not a preset-file load:
+
+1. Find a loadable browser item or a user-confirmed rack/preset with
+   `get_browser_tree` and `get_browser_items_at_path`. Follow returned paths
+   and URIs. Do not fabricate a plug-in URI. `insert_device` is for native Live
+   devices. The Max backend has a documented browser limitation.
+2. `create_midi_track(index=-1)`, reread the session, and name the track for
+   the role. Avoid changing global tempo, playback, existing clips, or routing.
+3. `load_instrument_or_effect(track_index, uri)` and `get_track_info`. If
+   loading fails, stop dependent writes and report the empty track.
+4. Read the unfiltered parameter inventory before edits. Do not assume the new
+   instance is Init. Apply only settings with a verified mapping, then recheck.
+5. Add an audition clip only when useful. Never describe a track with pending
+   manual settings as finished.
 
 The tool returns recommendations; it does not execute this sequence itself.
 
@@ -120,7 +123,8 @@ The tool returns recommendations; it does not execute this sequence itself.
 For requested Serum preset edits, use the JSON round trip above. Identify or
 obtain an export of the current patch; do not substitute an old library file for
 unsaved instance state. Implement the targeted transformation in that JSON and
-deliver the repacked preset, then load/verify separately. Missing Configure
+deliver the repacked preset, then `load_plugin_preset` when it should be heard
+in Live. Missing Configure
 controls do not block file edits. The full new-preset redesign checklist is not
 a requirement to alter unrelated categories in an existing patch.
 
@@ -149,7 +153,8 @@ Configure and establishing mappings can still require manual work.
 | Inferred | A reasoned hypothesis from musical context, never a current-control claim |
 | Proposed | A design target; not proof the library asset exists or setting is applied |
 | MCP-verified | Write succeeded and actual readback supports the intended setting |
-| Encoded in output; not loaded | Decoded file comparison verifies preset state; live application still requires loading/checking |
+| Encoded in output; not loaded | Decoded file comparison verifies preset state; `load_plugin_preset` has not reported `loaded: true` |
+| Loaded with preset; not individually read back | The host preset load put that file state on the device. Configure did not confirm each control |
 | User-confirmed | User reports applying/seeing it; not an MCP readback |
 | unknown/unverified | Missing version, label, mapping, asset, or current value |
 | not applied — set manually | Every intended setting not implemented by the MCP |

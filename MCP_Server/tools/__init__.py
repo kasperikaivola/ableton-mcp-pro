@@ -6,6 +6,7 @@ from . import clips_notes
 from . import devices_browser
 from . import mixer_routing
 from . import midigenai
+from . import plugin_presets
 from . import racks_detail
 from . import session_transport
 from . import serum_presets
@@ -19,6 +20,7 @@ __all__ = [
     "devices_browser",
     "mixer_routing",
     "midigenai",
+    "plugin_presets",
     "racks_detail",
     "session_transport",
     "serum_presets",

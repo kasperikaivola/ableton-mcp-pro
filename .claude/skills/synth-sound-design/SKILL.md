@@ -52,10 +52,24 @@ references' checklist. Apply only controls with verified mappings/conversions;
 read back writes/display values. If loading/initialization is blocked, give exact
 manual steps and accurately report the partial result.
 
-For Serum 2, implement that design in a separate `.SerumPreset` with the offline
-workflow below. Missing Configure controls are not a reason to leave sources,
-filters, envelopes, matrix or FX unedited. Generate the file even if loading is
-blocked. Load before live adjustments that would be replaced by preset loading.
+For Serum 2, implement that design as an entirely new `.SerumPreset`. A
+configured or other existing template may be the starting file. Changing one
+or two parameters is not a new preset. Read `get_user_config`, start from
+`plugins.serum2.preset_template` unless another baseline was requested, and
+write a separate file under `generated_presets_path`. `compare_serum_presets`
+against that baseline before loading. If the difference is only one or two
+parameters, keep designing. Missing Configure controls are not a reason to
+leave sources, filters, envelopes, matrix or FX unedited. Generate the file
+even when Live is closed.
+
+When the Remote Script browser is connected, call
+`load_plugin_preset(plugin_id="serum2", source_path=...)`. Omit `track_index`
+to create a MIDI track. Pass a track index only when asked to replace that
+track's instrument; clips and the other devices stay. Add a melody or other
+clip only when asked. If Live is unavailable, deliver the file and say the
+load did not happen. Do not invent a browser URI. `set_plugin_preset` selects
+a host program bank, not a `.SerumPreset`. Load before live knob writes that
+a preset load would replace.
 
 Include inactive module states or a confirmed baseline, exact sources/modes,
 routing, envelopes, modulation, FX order/values/sync, voices/performance and save
@@ -109,6 +123,10 @@ cannot substitute for it. Put initialization before dependent manual steps.
 
 If all intended changes were verified, still include the section with
 `No manual settings required for the verified changes.` Otherwise retain gaps.
+After `load_plugin_preset` reports `loaded: true`, file settings are
+`loaded with preset; not individually read back` unless Configure readback
+confirms them. List true gaps as `not applied — set manually`. If the load
+did not happen, keep `encoded in output; not loaded` and give the file path.
 User-confirmed values are not MCP-verified without readback. Mark unconfirmed
 assets as proposed choices, availability unknown/unverified. Do not claim a
 complete patch while manual steps remain.
@@ -127,12 +145,14 @@ subtrees including embedded data without copying previews. Object destinations
 set/replace, array destinations insert (`/-` appends); reconcile dependent routes
 and selectors explicitly. Copying does not invent/remap enum or module IDs.
 
-**Create a new preset means actually write a new `.SerumPreset`, not only a
-recipe, renamed template, minor knob edit or dry-run.** Use a validated Init or
-suitable template and compatible reference modules. Plan and perform substantial
-style-defining edits across oscillator mode/wavetable selection/warp/unison,
-sub/noise, filters/routing, amplitude and additional envelopes, LFO curves/rates,
-matrix/performance routes, ordered/repeated FX with their settings, and voicing.
+**An entirely new preset is a new design, written to a new `.SerumPreset`.**
+A recipe, renamed template, dry-run, or one or two parameters changed from the
+baseline is not a new preset. Existing templates can be the starting point.
+`get_user_config` supplies `plugins.serum2.preset_template` and
+`generated_presets_path`. Plan and perform style-defining edits across
+oscillator mode/wavetable selection/warp/unison, sub/noise, filters/routing,
+amplitude and additional envelopes, LFO curves/rates, matrix/performance
+routes, ordered/repeated FX with their settings, and voicing.
 For every category record edit, retain from named baseline (reason), off/unused,
 or a specific blocker. Do not enable every module or invent unknown enum IDs.
 
@@ -150,18 +170,20 @@ verification. Never feed huge embedded sample arrays to chat or write summary
 previews back as complete state. Discover real paths; unknown file defaults,
 enums, units and coupled fields need verified mappings or controlled manual exports.
 A disk preset is not loaded-instance readback. File generation preserves unknown
-fields/assets but loading and auditioning remain manual. Keep this distinction in
-the final manual-settings handoff, including unapplied loading/verification steps.
-For authorized creation, dry-run then publish with `dry_run=false` and compare
-decoded edits against the complete design, including dependent routes and FX order.
-Report output path and dependencies, verified file edits, live loading status and
-specific gaps. Settings encoded in a verified file need loading, not redundant
-manual recreation; identify them as encoded but not applied to the instance.
+fields/assets. With the Remote Script connected, `load_plugin_preset` publishes
+a new `.vstpreset` and inserts Serum 2 with that preset. It can also load an
+existing preset file; the new host file is always separate. Audition stays
+separate from the load report. For authorized creation, dry-run then publish
+with `dry_run=false` and compare decoded edits against the complete design,
+including dependent routes and FX order. Report output path, dependencies,
+verified file edits, `loaded`, and specific gaps. Settings encoded in a file
+that loaded are not recreated knob by knob.
 
 ## Preset and asset discovery
 
-Use `search_audio_assets` before guessing a template/preset path. Default root is
-`G:/AudioAssets`; `*init*.SerumPreset` or `*pad*.SerumPreset` searches filenames
+Use `search_audio_assets` before guessing a template/preset path. The default
+root is `get_user_config` `asset_library_path` (`G:/AudioAssets` when unset).
+`*init*.SerumPreset` or `*pad*.SerumPreset` searches filenames
 at every depth, and `**/Serum*/**/*.SerumPreset` narrows folder patterns. Matching
 is case-insensitive; use next_offset and respect scan_complete/stop_reason/errors.
 Narrow root_path to a discovered pack for faster scans. Validate candidates with

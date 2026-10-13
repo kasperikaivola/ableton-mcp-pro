@@ -1,0 +1,12 @@
+{
+  "asset_library_path": "C:/path/to/your/audio/assets",
+  "plugins": {
+    "serum2": {
+      "device_name": "Serum 2",
+      "preset_template": "C:/path/to/your/serum2/Init.SerumPreset",
+      "host_preset_template": "C:/path/to/your/serum2/VST/preset.vstpreset",
+      "generated_presets_path": "C:/path/to/your/generated/presets",
+      "browser_path": "user_library/MCP Generated/serum2"
+    }
+  }
+}

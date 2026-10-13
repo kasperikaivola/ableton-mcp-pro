@@ -69,11 +69,18 @@ requirement to unrelated parts of an existing patch.
    Source overwrites, aliases and hard links are rejected.
 8. `compare_serum_presets(left_path=original, right_path=output)` confirms decoded
    changes. Inspect all pages; equality concerns state, not compression or sound.
-9. Manually load through Serum's own file UI, verify settings and audition in
-   context. Retain the original. File generation is not applying to the synth.
+9. With the Remote Script connected, `load_plugin_preset(plugin_id="serum2",
+   source_path=output)` inserts Serum 2 with that preset. Omit `track_index`
+   for a new MIDI track, or pass one to replace that track's instrument while
+   keeping clips and the other devices. The tool writes a new `.vstpreset`;
+   it does not overwrite the source or the host template. If Live is
+   unavailable, report the `.SerumPreset` path and that the load did not
+   happen. Audition remains separate. An existing preset file can be the
+   `source_path`; the published host preset is still a new file.
 
-Suggestion-only requests permit reads, not file writes. Actual loading remains
-manual unless another independently verified loading mechanism is available.
+Suggestion-only requests permit reads, not file writes. A connected Remote
+Script loads through `load_plugin_preset`. `set_plugin_preset` only selects a
+host program bank.
 
 ## Existing preset edits
 
@@ -163,12 +170,18 @@ any resulting partial deliverable accurately.
 ## New preset design
 
 Translate the requested style into audible design decisions: source spectrum,
-register, attack/body/tail, movement, space and performance. Choose a baseline
-for its useful architecture, not just its name. A styled new patch normally needs
+register, attack/body/tail, movement, space and performance. An entirely new
+preset has to be an entirely new design. `get_user_config` `preset_template`,
+or another existing preset, may be the starting file, and the result is always
+saved as a new file. Changing one or two parameters from that baseline is not
+a new preset; keep editing before `load_plugin_preset`. Choose a baseline for
+its useful architecture, not just its name. A styled new patch normally needs
 substantial changes across sources, filtering, envelopes, modulation, FX and
 voicing. Most of the defining settings must be deliberately designed and edited.
-There is no numeric edit quota: a simple dry bass may intentionally omit noise
-and reverb, while an evolving pad can need several envelopes/LFOs and FX blocks.
+There is no numeric edit quota beyond that floor: a simple dry bass may
+intentionally omit noise and reverb, while an evolving pad can need several
+envelopes/LFOs and FX blocks. "Make this preset darker" is an existing-preset
+edit, not a request to redesign every module.
 
 Before writing, make a coverage table. For **every row**, record intended design,
 actual discovered file pointers and one of: edit, retain from named baseline
@@ -533,26 +546,35 @@ remains unapplied to the running instrument until loaded and checked.
 For a file-only request use `Track/device: not applicable — offline preset`.
 Report the output path, source/build, dependencies and full patch recipe. Group
 settings already encoded in the verified file as **encoded in output; not loaded**
-and give one loading/verification step for them; do not instruct the user to
+until `load_plugin_preset` reports `loaded: true`. Then group them as
+**loaded with preset; not individually read back** and do not instruct the user to
 recreate that state knob by knob. True missing/unencoded settings still need exact
 UI locations/values and `not applied — set manually` status. If no live loading was
 requested, state that clearly while retaining the manual-settings section; do not
 call encoded modulation missing merely because no instance was requested.
 
-## Loading prototype
+## Loading
 
-A same-build `.SerumPreset` → `.vstpreset` → Ableton browser path was demonstrated
-on 2026-10-07 using Serum 2.0.16 and Live 12.4. See the experimental
-[prototype and evidence](../../artifacts/vstpreset-prototype/README.md).
-The generated preset loaded onto a new track through `load_instrument_or_effect`;
-29 selected live parameter values matched its source. Source/template files
-remained unchanged. No audio audition or full live FX/matrix/asset readback was
-performed. Existing-device replacement and other builds remain untested.
+`load_plugin_preset` is the shared VST load. Serum 2 is the first adapter.
+It packs a `.SerumPreset` into a new same-build `.vstpreset` using
+`plugins.serum2.host_preset_template`, writes that file under
+`generated_presets_path`, and loads the URI Live's browser returns.
+`userconfig.json` in the repo root holds the asset library, template, output
+directory, and `browser_path`. An explicit `host_preset_template` argument
+can point at another existing same-build `.vstpreset`. Source and template
+files stay unchanged.
 
-This is not yet a registered MCP conversion/loading tool or general guarantee.
-Use only actual discovered browser URIs; `.SerumPreset` paths still cannot be
-passed directly to the browser loader. Keep the ordinary file-generation/manual
-handoff workflow unless a compatible loading mechanism is independently verified.
+`loaded: true` means the device list shows `device_name` after the browser
+load, with clips and non-instrument devices unchanged. Configure values are
+not a full preset comparison. Wavetable names, matrix routes, and FX that
+Configure does not expose stay "loaded with preset; not individually read
+back" unless a later read actually sees them. No audio audition is performed.
+Cross-version packs are rejected. The Max for Live backend has no browser, so
+this load requires the Remote Script. A plugin without an adapter is refused.
+
+The 2026-10-07 prototype demonstrated this path for Serum 2.0.16 and Live 12.4
+on a new track. See [prototype evidence](../../artifacts/vstpreset-prototype/README.md).
+Use the tool's returned URI. A `.SerumPreset` path is not itself a browser URI.
 
 ## Sources
 
